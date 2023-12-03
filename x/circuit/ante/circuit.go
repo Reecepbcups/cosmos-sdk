@@ -6,6 +6,7 @@ import (
 	"github.com/cockroachdb/errors"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/authz"
 )
 
 // CircuitBreaker is an interface that defines the methods for a circuit breaker.
@@ -26,7 +27,29 @@ func NewCircuitBreakerDecorator(ck CircuitBreaker) CircuitBreakerDecorator {
 
 func (cbd CircuitBreakerDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {
 	// loop through all the messages and check if the message type is allowed
-	for _, msg := range tx.GetMsgs() {
+	ctx, err := cbd.checkMsgs(ctx, tx.GetMsgs())
+	if err != nil {
+		return ctx, err
+	}
+
+	return next(ctx, tx, simulate)
+}
+
+func (cbd CircuitBreakerDecorator) checkMsgs(ctx sdk.Context, msgs []sdk.Msg) (sdk.Context, error) {
+	for _, msg := range msgs {
+		// authz nested message check (recursive)
+		if execMsg, ok := msg.(*authz.MsgExec); ok {
+			msgs, err := execMsg.GetMessages()
+			if err != nil {
+				return ctx, err
+			}
+
+			ctx, err = cbd.checkMsgs(ctx, msgs)
+			if err != nil {
+				return ctx, err
+			}
+		}
+
 		isAllowed, err := cbd.circuitKeeper.IsAllowed(ctx, sdk.MsgTypeURL(msg))
 		if err != nil {
 			return ctx, err
@@ -37,5 +60,5 @@ func (cbd CircuitBreakerDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simula
 		}
 	}
 
-	return next(ctx, tx, simulate)
+	return ctx, nil
 }

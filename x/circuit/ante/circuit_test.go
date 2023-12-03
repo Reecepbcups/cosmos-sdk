@@ -11,15 +11,17 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	"cosmossdk.io/x/circuit/ante"
 	cbtypes "cosmossdk.io/x/circuit/types"
+	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/testutil"
 	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
-	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/authz"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
 
 type fixture struct {
@@ -31,11 +33,16 @@ type fixture struct {
 }
 
 type MockCircuitBreaker struct {
-	isAllowed bool
+	blockedMsgs []string
 }
 
 func (m MockCircuitBreaker) IsAllowed(ctx context.Context, typeURL string) (bool, error) {
-	return typeURL == "/cosmos.circuit.v1.MsgAuthorizeCircuitBreaker", nil
+	for _, blockedMsg := range m.blockedMsgs {
+		if typeURL == blockedMsg {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func initFixture(t *testing.T) *fixture {
@@ -60,20 +67,42 @@ func TestCircuitBreakerDecorator(t *testing.T) {
 
 	_, _, addr1 := testdata.KeyTestPubAddr()
 
+	msgExec := authz.NewMsgExec(addr1, []sdk.Msg{&banktypes.MsgSend{}})
+	doubleNestedMsgExec := authz.NewMsgExec(addr1, []sdk.Msg{&msgExec})
+
 	testcases := []struct {
-		msg     sdk.Msg
-		allowed bool
+		msg         sdk.Msg
+		allowed     bool
+		blockedMsgs []string
 	}{
-		{msg: &cbtypes.MsgAuthorizeCircuitBreaker{
-			Grantee: "cosmos1fghij",
-			Granter: "cosmos1abcde",
-		}, allowed: true},
-		{msg: testdata.NewTestMsg(addr1), allowed: false},
+		{
+			msg: &cbtypes.MsgAuthorizeCircuitBreaker{
+				Grantee: "cosmos1fghij",
+				Granter: "cosmos1abcde",
+			},
+			allowed:     true,
+			blockedMsgs: []string{},
+		},
+		{
+			msg:         &banktypes.MsgSend{},
+			allowed:     true,
+			blockedMsgs: []string{"/cosmos.unrelated"},
+		},
+		{
+			msg:         &msgExec,
+			allowed:     false,
+			blockedMsgs: []string{"/cosmos.bank.v1beta1.MsgSend"},
+		},
+		{
+			msg:         &doubleNestedMsgExec,
+			allowed:     false,
+			blockedMsgs: []string{"/cosmos.bank.v1beta1.MsgSend"},
+		},
 	}
 
 	for _, tc := range testcases {
 		// Circuit breaker is allowed to pass through all transactions
-		circuitBreaker := &MockCircuitBreaker{true}
+		circuitBreaker := &MockCircuitBreaker{tc.blockedMsgs}
 		// CircuitBreakerDecorator AnteHandler should always return success
 		decorator := ante.NewCircuitBreakerDecorator(circuitBreaker)
 
