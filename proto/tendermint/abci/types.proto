@@ -23,14 +23,14 @@ service ABCI {
   rpc Query(RequestQuery) returns (ResponseQuery);
   rpc Commit(RequestCommit) returns (ResponseCommit);
   rpc InitChain(RequestInitChain) returns (ResponseInitChain);
-  rpc ListSnapshots(RequestListSnapshots) returns (ResponseListSnapshots);
-  rpc OfferSnapshot(RequestOfferSnapshot) returns (ResponseOfferSnapshot);
-  rpc LoadSnapshotChunk(RequestLoadSnapshotChunk) returns (ResponseLoadSnapshotChunk);
-  rpc ApplySnapshotChunk(RequestApplySnapshotChunk) returns (ResponseApplySnapshotChunk);
+  // rpc ListSnapshots(RequestListSnapshots) returns (ResponseListSnapshots);
+  // rpc OfferSnapshot(RequestOfferSnapshot) returns (ResponseOfferSnapshot);
+  // rpc LoadSnapshotChunk(RequestLoadSnapshotChunk) returns (ResponseLoadSnapshotChunk);
+  // rpc ApplySnapshotChunk(RequestApplySnapshotChunk) returns (ResponseApplySnapshotChunk);
   rpc PrepareProposal(RequestPrepareProposal) returns (ResponsePrepareProposal);
   rpc ProcessProposal(RequestProcessProposal) returns (ResponseProcessProposal);
-  rpc ExtendVote(RequestExtendVote) returns (ResponseExtendVote);
-  rpc VerifyVoteExtension(RequestVerifyVoteExtension) returns (ResponseVerifyVoteExtension);
+  // rpc ExtendVote(RequestExtendVote) returns (ResponseExtendVote);
+  // rpc VerifyVoteExtension(RequestVerifyVoteExtension) returns (ResponseVerifyVoteExtension);
   rpc FinalizeBlock(RequestFinalizeBlock) returns (ResponseFinalizeBlock);
 }
 
@@ -39,22 +39,22 @@ service ABCI {
 
 message Request {
   oneof value {
-    RequestEcho                echo                  = 1;
-    RequestFlush               flush                 = 2;
-    RequestInfo                info                  = 3;
-    RequestInitChain           init_chain            = 5;
-    RequestQuery               query                 = 6;
-    RequestCheckTx             check_tx              = 8;
-    RequestCommit              commit                = 11;
-    RequestListSnapshots       list_snapshots        = 12;
-    RequestOfferSnapshot       offer_snapshot        = 13;
-    RequestLoadSnapshotChunk   load_snapshot_chunk   = 14;
-    RequestApplySnapshotChunk  apply_snapshot_chunk  = 15;
-    RequestPrepareProposal     prepare_proposal      = 16;
-    RequestProcessProposal     process_proposal      = 17;
-    RequestExtendVote          extend_vote           = 18;
-    RequestVerifyVoteExtension verify_vote_extension = 19;
-    RequestFinalizeBlock       finalize_block        = 20;
+    RequestEcho      echo       = 1;
+    RequestFlush     flush      = 2;
+    RequestInfo      info       = 3;
+    RequestInitChain init_chain = 5;
+    RequestQuery     query      = 6;
+    RequestCheckTx   check_tx   = 8;
+    RequestCommit    commit     = 11;
+    // RequestListSnapshots       list_snapshots        = 12;
+    // RequestOfferSnapshot       offer_snapshot        = 13;
+    // RequestLoadSnapshotChunk   load_snapshot_chunk   = 14;
+    // RequestApplySnapshotChunk  apply_snapshot_chunk  = 15;
+    RequestPrepareProposal prepare_proposal = 16;
+    RequestProcessProposal process_proposal = 17;
+    // RequestExtendVote          extend_vote           = 18;
+    // RequestVerifyVoteExtension verify_vote_extension = 19;
+    RequestFinalizeBlock finalize_block = 20;
   }
   reserved 4, 7, 9, 10; // SetOption, BeginBlock, DeliverTx, EndBlock
 }
@@ -101,27 +101,27 @@ message RequestCheckTx {
 message RequestCommit {}
 
 // lists available snapshots
-message RequestListSnapshots {}
+// message RequestListSnapshots {}
 
-// offers a snapshot to the application
-message RequestOfferSnapshot {
-  Snapshot snapshot = 1; // snapshot offered by peers
-  bytes    app_hash = 2; // light client-verified app hash for snapshot height
-}
+// // offers a snapshot to the application
+// message RequestOfferSnapshot {
+//   Snapshot snapshot = 1; // snapshot offered by peers
+//   bytes    app_hash = 2; // light client-verified app hash for snapshot height
+// }
 
-// loads a snapshot chunk
-message RequestLoadSnapshotChunk {
-  uint64 height = 1;
-  uint32 format = 2;
-  uint32 chunk  = 3;
-}
+// // loads a snapshot chunk
+// message RequestLoadSnapshotChunk {
+//   uint64 height = 1;
+//   uint32 format = 2;
+//   uint32 chunk  = 3;
+// }
 
-// Applies a snapshot chunk
-message RequestApplySnapshotChunk {
-  uint32 index  = 1;
-  bytes  chunk  = 2;
-  string sender = 3;
-}
+// // Applies a snapshot chunk
+// message RequestApplySnapshotChunk {
+//   uint32 index  = 1;
+//   bytes  chunk  = 2;
+//   string sender = 3;
+// }
 
 message RequestPrepareProposal {
   // the modified transactions cannot exceed this size.
@@ -152,30 +152,30 @@ message RequestProcessProposal {
 }
 
 // Extends a vote with application-injected data
-message RequestExtendVote {
-  // the hash of the block that this vote may be referring to
-  bytes hash = 1;
-  // the height of the extended vote
-  int64 height = 2;
-  // info of the block that this vote may be referring to
-  google.protobuf.Timestamp time                 = 3 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
-  repeated bytes            txs                  = 4;
-  CommitInfo                proposed_last_commit = 5 [(gogoproto.nullable) = false];
-  repeated Misbehavior      misbehavior          = 6 [(gogoproto.nullable) = false];
-  bytes                     next_validators_hash = 7;
-  // address of the public key of the original proposer of the block.
-  bytes proposer_address = 8;
-}
+// message RequestExtendVote {
+//   // the hash of the block that this vote may be referring to
+//   bytes hash = 1;
+//   // the height of the extended vote
+//   int64 height = 2;
+//   // info of the block that this vote may be referring to
+//   google.protobuf.Timestamp time                 = 3 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
+//   repeated bytes            txs                  = 4;
+//   CommitInfo                proposed_last_commit = 5 [(gogoproto.nullable) = false];
+//   repeated Misbehavior      misbehavior          = 6 [(gogoproto.nullable) = false];
+//   bytes                     next_validators_hash = 7;
+//   // address of the public key of the original proposer of the block.
+//   bytes proposer_address = 8;
+// }
 
-// Verify the vote extension
-message RequestVerifyVoteExtension {
-  // the hash of the block that this received vote corresponds to
-  bytes hash = 1;
-  // the validator that signed the vote extension
-  bytes validator_address = 2;
-  int64 height            = 3;
-  bytes vote_extension    = 4;
-}
+// // Verify the vote extension
+// message RequestVerifyVoteExtension {
+//   // the hash of the block that this received vote corresponds to
+//   bytes hash = 1;
+//   // the validator that signed the vote extension
+//   bytes validator_address = 2;
+//   int64 height            = 3;
+//   bytes vote_extension    = 4;
+// }
 
 message RequestFinalizeBlock {
   repeated bytes       txs                 = 1;
@@ -195,23 +195,23 @@ message RequestFinalizeBlock {
 
 message Response {
   oneof value {
-    ResponseException           exception             = 1;
-    ResponseEcho                echo                  = 2;
-    ResponseFlush               flush                 = 3;
-    ResponseInfo                info                  = 4;
-    ResponseInitChain           init_chain            = 6;
-    ResponseQuery               query                 = 7;
-    ResponseCheckTx             check_tx              = 9;
-    ResponseCommit              commit                = 12;
-    ResponseListSnapshots       list_snapshots        = 13;
-    ResponseOfferSnapshot       offer_snapshot        = 14;
-    ResponseLoadSnapshotChunk   load_snapshot_chunk   = 15;
-    ResponseApplySnapshotChunk  apply_snapshot_chunk  = 16;
-    ResponsePrepareProposal     prepare_proposal      = 17;
-    ResponseProcessProposal     process_proposal      = 18;
-    ResponseExtendVote          extend_vote           = 19;
-    ResponseVerifyVoteExtension verify_vote_extension = 20;
-    ResponseFinalizeBlock       finalize_block        = 21;
+    ResponseException exception  = 1;
+    ResponseEcho      echo       = 2;
+    ResponseFlush     flush      = 3;
+    ResponseInfo      info       = 4;
+    ResponseInitChain init_chain = 6;
+    ResponseQuery     query      = 7;
+    ResponseCheckTx   check_tx   = 9;
+    ResponseCommit    commit     = 12;
+    // ResponseListSnapshots       list_snapshots        = 13;
+    // ResponseOfferSnapshot       offer_snapshot        = 14;
+    // ResponseLoadSnapshotChunk   load_snapshot_chunk   = 15;
+    // ResponseApplySnapshotChunk  apply_snapshot_chunk  = 16;
+    ResponsePrepareProposal prepare_proposal = 17;
+    ResponseProcessProposal process_proposal = 18;
+    // ResponseExtendVote          extend_vote           = 19;
+    // ResponseVerifyVoteExtension verify_vote_extension = 20;
+    ResponseFinalizeBlock finalize_block = 21;
   }
   reserved 5, 8, 10, 11; // SetOption, BeginBlock, DeliverTx, EndBlock
 }
@@ -277,41 +277,41 @@ message ResponseCommit {
   int64 retain_height = 3;
 }
 
-message ResponseListSnapshots {
-  repeated Snapshot snapshots = 1;
-}
+// message ResponseListSnapshots {
+//   repeated Snapshot snapshots = 1;
+// }
 
-message ResponseOfferSnapshot {
-  Result result = 1;
+// message ResponseOfferSnapshot {
+//   Result result = 1;
 
-  enum Result {
-    UNKNOWN       = 0; // Unknown result, abort all snapshot restoration
-    ACCEPT        = 1; // Snapshot accepted, apply chunks
-    ABORT         = 2; // Abort all snapshot restoration
-    REJECT        = 3; // Reject this specific snapshot, try others
-    REJECT_FORMAT = 4; // Reject all snapshots of this format, try others
-    REJECT_SENDER = 5; // Reject all snapshots from the sender(s), try others
-  }
-}
+//   enum Result {
+//     UNKNOWN       = 0; // Unknown result, abort all snapshot restoration
+//     ACCEPT        = 1; // Snapshot accepted, apply chunks
+//     ABORT         = 2; // Abort all snapshot restoration
+//     REJECT        = 3; // Reject this specific snapshot, try others
+//     REJECT_FORMAT = 4; // Reject all snapshots of this format, try others
+//     REJECT_SENDER = 5; // Reject all snapshots from the sender(s), try others
+//   }
+// }
 
-message ResponseLoadSnapshotChunk {
-  bytes chunk = 1;
-}
+// message ResponseLoadSnapshotChunk {
+//   bytes chunk = 1;
+// }
 
-message ResponseApplySnapshotChunk {
-  Result          result         = 1;
-  repeated uint32 refetch_chunks = 2; // Chunks to refetch and reapply
-  repeated string reject_senders = 3; // Chunk senders to reject and ban
+// message ResponseApplySnapshotChunk {
+//   Result          result         = 1;
+//   repeated uint32 refetch_chunks = 2; // Chunks to refetch and reapply
+//   repeated string reject_senders = 3; // Chunk senders to reject and ban
 
-  enum Result {
-    UNKNOWN         = 0; // Unknown result, abort all snapshot restoration
-    ACCEPT          = 1; // Chunk successfully accepted
-    ABORT           = 2; // Abort all snapshot restoration
-    RETRY           = 3; // Retry chunk (combine with refetch and reject)
-    RETRY_SNAPSHOT  = 4; // Retry snapshot (combine with refetch and reject)
-    REJECT_SNAPSHOT = 5; // Reject this snapshot, try others
-  }
-}
+//   enum Result {
+//     UNKNOWN         = 0; // Unknown result, abort all snapshot restoration
+//     ACCEPT          = 1; // Chunk successfully accepted
+//     ABORT           = 2; // Abort all snapshot restoration
+//     RETRY           = 3; // Retry chunk (combine with refetch and reject)
+//     RETRY_SNAPSHOT  = 4; // Retry snapshot (combine with refetch and reject)
+//     REJECT_SNAPSHOT = 5; // Reject this snapshot, try others
+//   }
+// }
 
 message ResponsePrepareProposal {
   repeated bytes txs = 1;
@@ -327,23 +327,23 @@ message ResponseProcessProposal {
   }
 }
 
-message ResponseExtendVote {
-  bytes vote_extension = 1;
-}
+// message ResponseExtendVote {
+//   bytes vote_extension = 1;
+// }
 
-message ResponseVerifyVoteExtension {
-  VerifyStatus status = 1;
+// message ResponseVerifyVoteExtension {
+//   VerifyStatus status = 1;
 
-  enum VerifyStatus {
-    UNKNOWN = 0;
-    ACCEPT  = 1;
-    // Rejecting the vote extension will reject the entire precommit by the sender.
-    // Incorrectly implementing this thus has liveness implications as it may affect
-    // CometBFT's ability to receive 2/3+ valid votes to finalize the block.
-    // Honest nodes should never be rejected.
-    REJECT = 2;
-  }
-}
+//   enum VerifyStatus {
+//     UNKNOWN = 0;
+//     ACCEPT  = 1;
+//     // Rejecting the vote extension will reject the entire precommit by the sender.
+//     // Incorrectly implementing this thus has liveness implications as it may affect
+//     // CometBFT's ability to receive 2/3+ valid votes to finalize the block.
+//     // Honest nodes should never be rejected.
+//     REJECT = 2;
+//   }
+// }
 
 message ResponseFinalizeBlock {
   // set of block events emmitted as part of executing the block

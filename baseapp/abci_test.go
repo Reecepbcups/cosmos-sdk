@@ -3,11 +3,9 @@ package baseapp_test
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math/rand"
 	"strconv"
 	"strings"
 	"testing"
@@ -282,143 +280,143 @@ func TestABCI_FinalizeBlock_WithBeginAndEndBlocker(t *testing.T) {
 	require.Equal(t, int64(1), app.LastBlockHeight())
 }
 
-func TestABCI_ExtendVote(t *testing.T) {
-	name := t.Name()
-	db := dbm.NewMemDB()
-	app := baseapp.NewBaseApp(name, log.NewTestLogger(t), db, nil)
+// func TestABCI_ExtendVote(t *testing.T) {
+// 	name := t.Name()
+// 	db := dbm.NewMemDB()
+// 	app := baseapp.NewBaseApp(name, log.NewTestLogger(t), db, nil)
 
-	app.SetExtendVoteHandler(func(ctx sdk.Context, req *abci.RequestExtendVote) (*abci.ResponseExtendVote, error) {
-		voteExt := "foo" + hex.EncodeToString(req.Hash) + strconv.FormatInt(req.Height, 10)
-		return &abci.ResponseExtendVote{VoteExtension: []byte(voteExt)}, nil
-	})
+// 	app.SetExtendVoteHandler(func(ctx sdk.Context, req *abci.RequestExtendVote) (*abci.ResponseExtendVote, error) {
+// 		voteExt := "foo" + hex.EncodeToString(req.Hash) + strconv.FormatInt(req.Height, 10)
+// 		return &abci.ResponseExtendVote{VoteExtension: []byte(voteExt)}, nil
+// 	})
 
-	app.SetVerifyVoteExtensionHandler(func(ctx sdk.Context, req *abci.RequestVerifyVoteExtension) (*abci.ResponseVerifyVoteExtension, error) {
-		// do some kind of verification here
-		expectedVoteExt := "foo" + hex.EncodeToString(req.Hash) + strconv.FormatInt(req.Height, 10)
-		if !bytes.Equal(req.VoteExtension, []byte(expectedVoteExt)) {
-			return &abci.ResponseVerifyVoteExtension{Status: abci.ResponseVerifyVoteExtension_REJECT}, nil
-		}
+// 	app.SetVerifyVoteExtensionHandler(func(ctx sdk.Context, req *abci.RequestVerifyVoteExtension) (*abci.ResponseVerifyVoteExtension, error) {
+// 		// do some kind of verification here
+// 		expectedVoteExt := "foo" + hex.EncodeToString(req.Hash) + strconv.FormatInt(req.Height, 10)
+// 		if !bytes.Equal(req.VoteExtension, []byte(expectedVoteExt)) {
+// 			return &abci.ResponseVerifyVoteExtension{Status: abci.ResponseVerifyVoteExtension_REJECT}, nil
+// 		}
 
-		return &abci.ResponseVerifyVoteExtension{Status: abci.ResponseVerifyVoteExtension_ACCEPT}, nil
-	})
+// 		return &abci.ResponseVerifyVoteExtension{Status: abci.ResponseVerifyVoteExtension_ACCEPT}, nil
+// 	})
 
-	app.SetParamStore(&paramStore{db: dbm.NewMemDB()})
-	_, err := app.InitChain(
-		&abci.RequestInitChain{
-			InitialHeight: 1,
-			ConsensusParams: &cmtproto.ConsensusParams{
-				Abci: &cmtproto.ABCIParams{
-					VoteExtensionsEnableHeight: 200,
-				},
-			},
-		},
-	)
-	require.NoError(t, err)
+// 	app.SetParamStore(&paramStore{db: dbm.NewMemDB()})
+// 	_, err := app.InitChain(
+// 		&abci.RequestInitChain{
+// 			InitialHeight: 1,
+// 			ConsensusParams: &cmtproto.ConsensusParams{
+// 				Abci: &cmtproto.ABCIParams{
+// 					VoteExtensionsEnableHeight: 200,
+// 				},
+// 			},
+// 		},
+// 	)
+// 	require.NoError(t, err)
 
-	// Votes not enabled yet
-	_, err = app.ExtendVote(context.Background(), &abci.RequestExtendVote{Height: 123, Hash: []byte("thehash")})
-	require.ErrorContains(t, err, "vote extensions are not enabled")
+// 	// Votes not enabled yet
+// 	_, err = app.ExtendVote(context.Background(), &abci.RequestExtendVote{Height: 123, Hash: []byte("thehash")})
+// 	require.ErrorContains(t, err, "vote extensions are not enabled")
 
-	// First vote on the first enabled height
-	res, err := app.ExtendVote(context.Background(), &abci.RequestExtendVote{Height: 200, Hash: []byte("thehash")})
-	require.NoError(t, err)
-	require.Len(t, res.VoteExtension, 20)
+// 	// First vote on the first enabled height
+// 	res, err := app.ExtendVote(context.Background(), &abci.RequestExtendVote{Height: 200, Hash: []byte("thehash")})
+// 	require.NoError(t, err)
+// 	require.Len(t, res.VoteExtension, 20)
 
-	res, err = app.ExtendVote(context.Background(), &abci.RequestExtendVote{Height: 1000, Hash: []byte("thehash")})
-	require.NoError(t, err)
-	require.Len(t, res.VoteExtension, 21)
+// 	res, err = app.ExtendVote(context.Background(), &abci.RequestExtendVote{Height: 1000, Hash: []byte("thehash")})
+// 	require.NoError(t, err)
+// 	require.Len(t, res.VoteExtension, 21)
 
-	// Error during vote extension should return an empty vote extension and no error
-	app.SetExtendVoteHandler(func(ctx sdk.Context, req *abci.RequestExtendVote) (*abci.ResponseExtendVote, error) {
-		return nil, errors.New("some error")
-	})
-	res, err = app.ExtendVote(context.Background(), &abci.RequestExtendVote{Height: 1000, Hash: []byte("thehash")})
-	require.NoError(t, err)
-	require.Len(t, res.VoteExtension, 0)
+// 	// Error during vote extension should return an empty vote extension and no error
+// 	app.SetExtendVoteHandler(func(ctx sdk.Context, req *abci.RequestExtendVote) (*abci.ResponseExtendVote, error) {
+// 		return nil, errors.New("some error")
+// 	})
+// 	res, err = app.ExtendVote(context.Background(), &abci.RequestExtendVote{Height: 1000, Hash: []byte("thehash")})
+// 	require.NoError(t, err)
+// 	require.Len(t, res.VoteExtension, 0)
 
-	// Verify Vote Extensions
-	_, err = app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 123, VoteExtension: []byte("1234567")})
-	require.ErrorContains(t, err, "vote extensions are not enabled")
+// 	// Verify Vote Extensions
+// 	_, err = app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 123, VoteExtension: []byte("1234567")})
+// 	require.ErrorContains(t, err, "vote extensions are not enabled")
 
-	// First vote on the first enabled height
-	vres, err := app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 200, Hash: []byte("thehash"), VoteExtension: []byte("foo74686568617368200")})
-	require.NoError(t, err)
-	require.Equal(t, abci.ResponseVerifyVoteExtension_ACCEPT, vres.Status)
+// 	// First vote on the first enabled height
+// 	vres, err := app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 200, Hash: []byte("thehash"), VoteExtension: []byte("foo74686568617368200")})
+// 	require.NoError(t, err)
+// 	require.Equal(t, abci.ResponseVerifyVoteExtension_ACCEPT, vres.Status)
 
-	vres, err = app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 1000, Hash: []byte("thehash"), VoteExtension: []byte("foo746865686173681000")})
-	require.NoError(t, err)
-	require.Equal(t, abci.ResponseVerifyVoteExtension_ACCEPT, vres.Status)
+// 	vres, err = app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 1000, Hash: []byte("thehash"), VoteExtension: []byte("foo746865686173681000")})
+// 	require.NoError(t, err)
+// 	require.Equal(t, abci.ResponseVerifyVoteExtension_ACCEPT, vres.Status)
 
-	// Reject because it's just some random bytes
-	vres, err = app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 201, Hash: []byte("thehash"), VoteExtension: []byte("12345678")})
-	require.NoError(t, err)
-	require.Equal(t, abci.ResponseVerifyVoteExtension_REJECT, vres.Status)
+// 	// Reject because it's just some random bytes
+// 	vres, err = app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 201, Hash: []byte("thehash"), VoteExtension: []byte("12345678")})
+// 	require.NoError(t, err)
+// 	require.Equal(t, abci.ResponseVerifyVoteExtension_REJECT, vres.Status)
 
-	// Reject because the verification failed (no error)
-	app.SetVerifyVoteExtensionHandler(func(ctx sdk.Context, req *abci.RequestVerifyVoteExtension) (*abci.ResponseVerifyVoteExtension, error) {
-		return nil, errors.New("some error")
-	})
-	vres, err = app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 201, Hash: []byte("thehash"), VoteExtension: []byte("12345678")})
-	require.NoError(t, err)
-	require.Equal(t, abci.ResponseVerifyVoteExtension_REJECT, vres.Status)
-}
+// 	// Reject because the verification failed (no error)
+// 	app.SetVerifyVoteExtensionHandler(func(ctx sdk.Context, req *abci.RequestVerifyVoteExtension) (*abci.ResponseVerifyVoteExtension, error) {
+// 		return nil, errors.New("some error")
+// 	})
+// 	vres, err = app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 201, Hash: []byte("thehash"), VoteExtension: []byte("12345678")})
+// 	require.NoError(t, err)
+// 	require.Equal(t, abci.ResponseVerifyVoteExtension_REJECT, vres.Status)
+// }
 
 // TestABCI_OnlyVerifyVoteExtension makes sure we can call VerifyVoteExtension
 // without having called ExtendVote before.
-func TestABCI_OnlyVerifyVoteExtension(t *testing.T) {
-	name := t.Name()
-	db := dbm.NewMemDB()
-	app := baseapp.NewBaseApp(name, log.NewTestLogger(t), db, nil)
+// func TestABCI_OnlyVerifyVoteExtension(t *testing.T) {
+// 	name := t.Name()
+// 	db := dbm.NewMemDB()
+// 	app := baseapp.NewBaseApp(name, log.NewTestLogger(t), db, nil)
 
-	app.SetVerifyVoteExtensionHandler(func(ctx sdk.Context, req *abci.RequestVerifyVoteExtension) (*abci.ResponseVerifyVoteExtension, error) {
-		// do some kind of verification here
-		expectedVoteExt := "foo" + hex.EncodeToString(req.Hash) + strconv.FormatInt(req.Height, 10)
-		if !bytes.Equal(req.VoteExtension, []byte(expectedVoteExt)) {
-			return &abci.ResponseVerifyVoteExtension{Status: abci.ResponseVerifyVoteExtension_REJECT}, nil
-		}
+// 	app.SetVerifyVoteExtensionHandler(func(ctx sdk.Context, req *abci.RequestVerifyVoteExtension) (*abci.ResponseVerifyVoteExtension, error) {
+// 		// do some kind of verification here
+// 		expectedVoteExt := "foo" + hex.EncodeToString(req.Hash) + strconv.FormatInt(req.Height, 10)
+// 		if !bytes.Equal(req.VoteExtension, []byte(expectedVoteExt)) {
+// 			return &abci.ResponseVerifyVoteExtension{Status: abci.ResponseVerifyVoteExtension_REJECT}, nil
+// 		}
 
-		return &abci.ResponseVerifyVoteExtension{Status: abci.ResponseVerifyVoteExtension_ACCEPT}, nil
-	})
+// 		return &abci.ResponseVerifyVoteExtension{Status: abci.ResponseVerifyVoteExtension_ACCEPT}, nil
+// 	})
 
-	app.SetParamStore(&paramStore{db: dbm.NewMemDB()})
-	_, err := app.InitChain(
-		&abci.RequestInitChain{
-			InitialHeight: 1,
-			ConsensusParams: &cmtproto.ConsensusParams{
-				Abci: &cmtproto.ABCIParams{
-					VoteExtensionsEnableHeight: 200,
-				},
-			},
-		},
-	)
-	require.NoError(t, err)
+// 	app.SetParamStore(&paramStore{db: dbm.NewMemDB()})
+// 	_, err := app.InitChain(
+// 		&abci.RequestInitChain{
+// 			InitialHeight: 1,
+// 			ConsensusParams: &cmtproto.ConsensusParams{
+// 				Abci: &cmtproto.ABCIParams{
+// 					VoteExtensionsEnableHeight: 200,
+// 				},
+// 			},
+// 		},
+// 	)
+// 	require.NoError(t, err)
 
-	// Verify Vote Extensions
-	_, err = app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 123, VoteExtension: []byte("1234567")})
-	require.ErrorContains(t, err, "vote extensions are not enabled")
+// 	// Verify Vote Extensions
+// 	_, err = app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 123, VoteExtension: []byte("1234567")})
+// 	require.ErrorContains(t, err, "vote extensions are not enabled")
 
-	// First vote on the first enabled height
-	vres, err := app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 200, Hash: []byte("thehash"), VoteExtension: []byte("foo74686568617368200")})
-	require.NoError(t, err)
-	require.Equal(t, abci.ResponseVerifyVoteExtension_ACCEPT, vres.Status)
+// 	// First vote on the first enabled height
+// 	vres, err := app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 200, Hash: []byte("thehash"), VoteExtension: []byte("foo74686568617368200")})
+// 	require.NoError(t, err)
+// 	require.Equal(t, abci.ResponseVerifyVoteExtension_ACCEPT, vres.Status)
 
-	vres, err = app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 1000, Hash: []byte("thehash"), VoteExtension: []byte("foo746865686173681000")})
-	require.NoError(t, err)
-	require.Equal(t, abci.ResponseVerifyVoteExtension_ACCEPT, vres.Status)
+// 	vres, err = app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 1000, Hash: []byte("thehash"), VoteExtension: []byte("foo746865686173681000")})
+// 	require.NoError(t, err)
+// 	require.Equal(t, abci.ResponseVerifyVoteExtension_ACCEPT, vres.Status)
 
-	// Reject because it's just some random bytes
-	vres, err = app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 201, Hash: []byte("thehash"), VoteExtension: []byte("12345678")})
-	require.NoError(t, err)
-	require.Equal(t, abci.ResponseVerifyVoteExtension_REJECT, vres.Status)
+// 	// Reject because it's just some random bytes
+// 	vres, err = app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 201, Hash: []byte("thehash"), VoteExtension: []byte("12345678")})
+// 	require.NoError(t, err)
+// 	require.Equal(t, abci.ResponseVerifyVoteExtension_REJECT, vres.Status)
 
-	// Reject because the verification failed (no error)
-	app.SetVerifyVoteExtensionHandler(func(ctx sdk.Context, req *abci.RequestVerifyVoteExtension) (*abci.ResponseVerifyVoteExtension, error) {
-		return nil, errors.New("some error")
-	})
-	vres, err = app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 201, Hash: []byte("thehash"), VoteExtension: []byte("12345678")})
-	require.NoError(t, err)
-	require.Equal(t, abci.ResponseVerifyVoteExtension_REJECT, vres.Status)
-}
+// 	// Reject because the verification failed (no error)
+// 	app.SetVerifyVoteExtensionHandler(func(ctx sdk.Context, req *abci.RequestVerifyVoteExtension) (*abci.ResponseVerifyVoteExtension, error) {
+// 		return nil, errors.New("some error")
+// 	})
+// 	vres, err = app.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{Height: 201, Hash: []byte("thehash"), VoteExtension: []byte("12345678")})
+// 	require.NoError(t, err)
+// 	require.Equal(t, abci.ResponseVerifyVoteExtension_REJECT, vres.Status)
+// }
 
 func TestABCI_GRPCQuery(t *testing.T) {
 	grpcQueryOpt := func(bapp *baseapp.BaseApp) {
@@ -2051,230 +2049,230 @@ func TestBaseApp_PreBlocker(t *testing.T) {
 }
 
 // TestBaseApp_VoteExtensions tests vote extensions using a price as an example.
-func TestBaseApp_VoteExtensions(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	valStore := mock.NewMockValidatorStore(ctrl)
+// func TestBaseApp_VoteExtensions(t *testing.T) {
+// 	ctrl := gomock.NewController(t)
+// 	valStore := mock.NewMockValidatorStore(ctrl)
 
-	// for brevity and simplicity, all validators have the same key
-	privKey := secp256k1.GenPrivKey()
-	pubKey := privKey.PubKey()
-	tmPk := cmtprotocrypto.PublicKey{
-		Sum: &cmtprotocrypto.PublicKey_Secp256K1{
-			Secp256K1: pubKey.Bytes(),
-		},
-	}
-	valStore.EXPECT().GetPubKeyByConsAddr(gomock.Any(), gomock.Any()).Return(tmPk, nil).AnyTimes()
+// 	// for brevity and simplicity, all validators have the same key
+// 	privKey := secp256k1.GenPrivKey()
+// 	pubKey := privKey.PubKey()
+// 	tmPk := cmtprotocrypto.PublicKey{
+// 		Sum: &cmtprotocrypto.PublicKey_Secp256K1{
+// 			Secp256K1: pubKey.Bytes(),
+// 		},
+// 	}
+// 	valStore.EXPECT().GetPubKeyByConsAddr(gomock.Any(), gomock.Any()).Return(tmPk, nil).AnyTimes()
 
-	baseappOpts := func(app *baseapp.BaseApp) {
-		app.SetExtendVoteHandler(func(sdk.Context, *abci.RequestExtendVote) (*abci.ResponseExtendVote, error) {
-			// here we would have a process to get the price from an external source
-			price := 10000000 + rand.Int63n(1000000)
-			ve := make([]byte, 8)
-			binary.BigEndian.PutUint64(ve, uint64(price))
-			return &abci.ResponseExtendVote{VoteExtension: ve}, nil
-		})
+// 	baseappOpts := func(app *baseapp.BaseApp) {
+// 		app.SetExtendVoteHandler(func(sdk.Context, *abci.RequestExtendVote) (*abci.ResponseExtendVote, error) {
+// 			// here we would have a process to get the price from an external source
+// 			price := 10000000 + rand.Int63n(1000000)
+// 			ve := make([]byte, 8)
+// 			binary.BigEndian.PutUint64(ve, uint64(price))
+// 			return &abci.ResponseExtendVote{VoteExtension: ve}, nil
+// 		})
 
-		app.SetVerifyVoteExtensionHandler(func(_ sdk.Context, req *abci.RequestVerifyVoteExtension) (*abci.ResponseVerifyVoteExtension, error) {
-			vePrice := binary.BigEndian.Uint64(req.VoteExtension)
-			// here we would do some price validation, must not be 0 and not too high
-			if vePrice > 11000000 || vePrice == 0 {
-				// usually application should always return ACCEPT unless they really want to discard the entire vote
-				return &abci.ResponseVerifyVoteExtension{Status: abci.ResponseVerifyVoteExtension_REJECT}, nil
-			}
+// 		app.SetVerifyVoteExtensionHandler(func(_ sdk.Context, req *abci.RequestVerifyVoteExtension) (*abci.ResponseVerifyVoteExtension, error) {
+// 			vePrice := binary.BigEndian.Uint64(req.VoteExtension)
+// 			// here we would do some price validation, must not be 0 and not too high
+// 			if vePrice > 11000000 || vePrice == 0 {
+// 				// usually application should always return ACCEPT unless they really want to discard the entire vote
+// 				return &abci.ResponseVerifyVoteExtension{Status: abci.ResponseVerifyVoteExtension_REJECT}, nil
+// 			}
 
-			return &abci.ResponseVerifyVoteExtension{Status: abci.ResponseVerifyVoteExtension_ACCEPT}, nil
-		})
+// 			return &abci.ResponseVerifyVoteExtension{Status: abci.ResponseVerifyVoteExtension_ACCEPT}, nil
+// 		})
 
-		app.SetPrepareProposal(func(ctx sdk.Context, req *abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error) {
-			txs := [][]byte{}
-			if err := baseapp.ValidateVoteExtensions(ctx, valStore, req.Height, app.ChainID(), req.LocalLastCommit); err != nil {
-				return nil, err
-			}
-			// add all VE as txs (in a real scenario we would need to check signatures too)
-			for _, v := range req.LocalLastCommit.Votes {
-				if len(v.VoteExtension) == 8 {
-					// pretend this is a way to check if the VE is valid
-					if binary.BigEndian.Uint64(v.VoteExtension) < 11000000 && binary.BigEndian.Uint64(v.VoteExtension) > 0 {
-						txs = append(txs, v.VoteExtension)
-					}
-				}
-			}
+// 		app.SetPrepareProposal(func(ctx sdk.Context, req *abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error) {
+// 			txs := [][]byte{}
+// 			if err := baseapp.ValidateVoteExtensions(ctx, valStore, req.Height, app.ChainID(), req.LocalLastCommit); err != nil {
+// 				return nil, err
+// 			}
+// 			// add all VE as txs (in a real scenario we would need to check signatures too)
+// 			for _, v := range req.LocalLastCommit.Votes {
+// 				if len(v.VoteExtension) == 8 {
+// 					// pretend this is a way to check if the VE is valid
+// 					if binary.BigEndian.Uint64(v.VoteExtension) < 11000000 && binary.BigEndian.Uint64(v.VoteExtension) > 0 {
+// 						txs = append(txs, v.VoteExtension)
+// 					}
+// 				}
+// 			}
 
-			return &abci.ResponsePrepareProposal{Txs: txs}, nil
-		})
+// 			return &abci.ResponsePrepareProposal{Txs: txs}, nil
+// 		})
 
-		app.SetProcessProposal(func(ctx sdk.Context, req *abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error) {
-			// here we check if the proposal is valid, mainly if the vote extensions appended to the txs are valid
-			for _, v := range req.Txs {
-				// pretend this is a way to check if the tx is actually a VE
-				if len(v) == 8 {
-					// pretend this is a way to check if the VE is valid
-					if binary.BigEndian.Uint64(v) > 11000000 || binary.BigEndian.Uint64(v) == 0 {
-						return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-					}
-				}
-			}
+// 		app.SetProcessProposal(func(ctx sdk.Context, req *abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error) {
+// 			// here we check if the proposal is valid, mainly if the vote extensions appended to the txs are valid
+// 			for _, v := range req.Txs {
+// 				// pretend this is a way to check if the tx is actually a VE
+// 				if len(v) == 8 {
+// 					// pretend this is a way to check if the VE is valid
+// 					if binary.BigEndian.Uint64(v) > 11000000 || binary.BigEndian.Uint64(v) == 0 {
+// 						return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
+// 					}
+// 				}
+// 			}
 
-			return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_ACCEPT}, nil
-		})
+// 			return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_ACCEPT}, nil
+// 		})
 
-		app.SetPreBlocker(func(ctx sdk.Context, req *abci.RequestFinalizeBlock) (*sdk.ResponsePreBlock, error) {
-			count := uint64(0)
-			pricesSum := uint64(0)
-			for _, v := range req.Txs {
-				// pretend this is a way to check if the tx is actually a VE
-				if len(v) == 8 {
-					count++
-					pricesSum += binary.BigEndian.Uint64(v)
-				}
-			}
+// 		app.SetPreBlocker(func(ctx sdk.Context, req *abci.RequestFinalizeBlock) (*sdk.ResponsePreBlock, error) {
+// 			count := uint64(0)
+// 			pricesSum := uint64(0)
+// 			for _, v := range req.Txs {
+// 				// pretend this is a way to check if the tx is actually a VE
+// 				if len(v) == 8 {
+// 					count++
+// 					pricesSum += binary.BigEndian.Uint64(v)
+// 				}
+// 			}
 
-			if count > 0 {
-				// we process the average price and store it in the context to make it available for FinalizeBlock
-				avgPrice := pricesSum / count
-				buf := make([]byte, 8)
-				binary.BigEndian.PutUint64(buf, avgPrice)
-				ctx.KVStore(capKey1).Set([]byte("avgPrice"), buf)
-			}
+// 			if count > 0 {
+// 				// we process the average price and store it in the context to make it available for FinalizeBlock
+// 				avgPrice := pricesSum / count
+// 				buf := make([]byte, 8)
+// 				binary.BigEndian.PutUint64(buf, avgPrice)
+// 				ctx.KVStore(capKey1).Set([]byte("avgPrice"), buf)
+// 			}
 
-			return &sdk.ResponsePreBlock{
-				ConsensusParamsChanged: true,
-			}, nil
-		})
-	}
+// 			return &sdk.ResponsePreBlock{
+// 				ConsensusParamsChanged: true,
+// 			}, nil
+// 		})
+// 	}
 
-	suite := NewBaseAppSuite(t, baseappOpts)
+// 	suite := NewBaseAppSuite(t, baseappOpts)
 
-	_, err := suite.baseApp.InitChain(&abci.RequestInitChain{
-		ConsensusParams: &cmtproto.ConsensusParams{
-			Abci: &cmtproto.ABCIParams{
-				VoteExtensionsEnableHeight: 1,
-			},
-		},
-	})
-	require.NoError(t, err)
+// 	_, err := suite.baseApp.InitChain(&abci.RequestInitChain{
+// 		ConsensusParams: &cmtproto.ConsensusParams{
+// 			Abci: &cmtproto.ABCIParams{
+// 				VoteExtensionsEnableHeight: 1,
+// 			},
+// 		},
+// 	})
+// 	require.NoError(t, err)
 
-	allVEs := [][]byte{}
-	// simulate getting 10 vote extensions from 10 validators
-	for i := 0; i < 10; i++ {
-		ve, err := suite.baseApp.ExtendVote(context.TODO(), &abci.RequestExtendVote{Height: 1})
-		require.NoError(t, err)
-		allVEs = append(allVEs, ve.VoteExtension)
-	}
+// 	allVEs := [][]byte{}
+// 	// simulate getting 10 vote extensions from 10 validators
+// 	for i := 0; i < 10; i++ {
+// 		ve, err := suite.baseApp.ExtendVote(context.TODO(), &abci.RequestExtendVote{Height: 1})
+// 		require.NoError(t, err)
+// 		allVEs = append(allVEs, ve.VoteExtension)
+// 	}
 
-	// add a couple of invalid vote extensions (in what regards to the check we are doing in VerifyVoteExtension/ProcessProposal)
-	// add a 0 price
-	ve := make([]byte, 8)
-	binary.BigEndian.PutUint64(ve, uint64(0))
-	allVEs = append(allVEs, ve)
+// 	// add a couple of invalid vote extensions (in what regards to the check we are doing in VerifyVoteExtension/ProcessProposal)
+// 	// add a 0 price
+// 	ve := make([]byte, 8)
+// 	binary.BigEndian.PutUint64(ve, uint64(0))
+// 	allVEs = append(allVEs, ve)
 
-	// add a price too high
-	ve = make([]byte, 8)
-	binary.BigEndian.PutUint64(ve, uint64(13000000))
-	allVEs = append(allVEs, ve)
+// 	// add a price too high
+// 	ve = make([]byte, 8)
+// 	binary.BigEndian.PutUint64(ve, uint64(13000000))
+// 	allVEs = append(allVEs, ve)
 
-	// verify all votes, only 10 should be accepted
-	successful := 0
-	for _, v := range allVEs {
-		res, err := suite.baseApp.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{
-			Height:        1,
-			VoteExtension: v,
-		})
-		require.NoError(t, err)
-		if res.Status == abci.ResponseVerifyVoteExtension_ACCEPT {
-			successful++
-		}
-	}
-	require.Equal(t, 10, successful)
+// 	// verify all votes, only 10 should be accepted
+// 	successful := 0
+// 	for _, v := range allVEs {
+// 		res, err := suite.baseApp.VerifyVoteExtension(&abci.RequestVerifyVoteExtension{
+// 			Height:        1,
+// 			VoteExtension: v,
+// 		})
+// 		require.NoError(t, err)
+// 		if res.Status == abci.ResponseVerifyVoteExtension_ACCEPT {
+// 			successful++
+// 		}
+// 	}
+// 	require.Equal(t, 10, successful)
 
-	prepPropReq := &abci.RequestPrepareProposal{
-		Height: 1,
-		LocalLastCommit: abci.ExtendedCommitInfo{
-			Round: 0,
-			Votes: []abci.ExtendedVoteInfo{},
-		},
-	}
+// 	prepPropReq := &abci.RequestPrepareProposal{
+// 		Height: 1,
+// 		LocalLastCommit: abci.ExtendedCommitInfo{
+// 			Round: 0,
+// 			Votes: []abci.ExtendedVoteInfo{},
+// 		},
+// 	}
 
-	// add all VEs to the local last commit, which will make PrepareProposal fail
-	// because it's not expecting to receive vote extensions when height == VoteExtensionsEnableHeight
-	for _, ve := range allVEs {
-		prepPropReq.LocalLastCommit.Votes = append(prepPropReq.LocalLastCommit.Votes, abci.ExtendedVoteInfo{
-			VoteExtension:      ve,
-			BlockIdFlag:        cmtproto.BlockIDFlagCommit,
-			ExtensionSignature: []byte{}, // doesn't matter, it's just to make the next PrepareProposal fail
-		})
-	}
-	resp, err := suite.baseApp.PrepareProposal(prepPropReq)
-	require.Len(t, resp.Txs, 0) // this is actually a failure, but we don't want to halt the chain
-	require.NoError(t, err)     // we don't error here
+// 	// add all VEs to the local last commit, which will make PrepareProposal fail
+// 	// because it's not expecting to receive vote extensions when height == VoteExtensionsEnableHeight
+// 	for _, ve := range allVEs {
+// 		prepPropReq.LocalLastCommit.Votes = append(prepPropReq.LocalLastCommit.Votes, abci.ExtendedVoteInfo{
+// 			VoteExtension:      ve,
+// 			BlockIdFlag:        cmtproto.BlockIDFlagCommit,
+// 			ExtensionSignature: []byte{}, // doesn't matter, it's just to make the next PrepareProposal fail
+// 		})
+// 	}
+// 	resp, err := suite.baseApp.PrepareProposal(prepPropReq)
+// 	require.Len(t, resp.Txs, 0) // this is actually a failure, but we don't want to halt the chain
+// 	require.NoError(t, err)     // we don't error here
 
-	prepPropReq.LocalLastCommit.Votes = []abci.ExtendedVoteInfo{} // reset votes
-	resp, err = suite.baseApp.PrepareProposal(prepPropReq)
-	require.NoError(t, err)
-	require.Len(t, resp.Txs, 0)
+// 	prepPropReq.LocalLastCommit.Votes = []abci.ExtendedVoteInfo{} // reset votes
+// 	resp, err = suite.baseApp.PrepareProposal(prepPropReq)
+// 	require.NoError(t, err)
+// 	require.Len(t, resp.Txs, 0)
 
-	procPropRes, err := suite.baseApp.ProcessProposal(&abci.RequestProcessProposal{Height: 1, Txs: resp.Txs})
-	require.NoError(t, err)
-	require.Equal(t, abci.ResponseProcessProposal_ACCEPT, procPropRes.Status)
+// 	procPropRes, err := suite.baseApp.ProcessProposal(&abci.RequestProcessProposal{Height: 1, Txs: resp.Txs})
+// 	require.NoError(t, err)
+// 	require.Equal(t, abci.ResponseProcessProposal_ACCEPT, procPropRes.Status)
 
-	_, err = suite.baseApp.FinalizeBlock(&abci.RequestFinalizeBlock{Height: 1, Txs: resp.Txs})
-	require.NoError(t, err)
+// 	_, err = suite.baseApp.FinalizeBlock(&abci.RequestFinalizeBlock{Height: 1, Txs: resp.Txs})
+// 	require.NoError(t, err)
 
-	// The average price will be nil during the first block, given that we don't have
-	// any vote extensions on block 1 in PrepareProposal
-	avgPrice := getFinalizeBlockStateCtx(suite.baseApp).KVStore(capKey1).Get([]byte("avgPrice"))
-	require.Nil(t, avgPrice)
-	_, err = suite.baseApp.Commit()
-	require.NoError(t, err)
+// 	// The average price will be nil during the first block, given that we don't have
+// 	// any vote extensions on block 1 in PrepareProposal
+// 	avgPrice := getFinalizeBlockStateCtx(suite.baseApp).KVStore(capKey1).Get([]byte("avgPrice"))
+// 	require.Nil(t, avgPrice)
+// 	_, err = suite.baseApp.Commit()
+// 	require.NoError(t, err)
 
-	// Now onto the second block, this time we process vote extensions from the
-	// previous block (which we sign now)
-	for _, ve := range allVEs {
-		cve := cmtproto.CanonicalVoteExtension{
-			Extension: ve,
-			Height:    1,
-			Round:     int64(0),
-			ChainId:   suite.baseApp.ChainID(),
-		}
+// 	// Now onto the second block, this time we process vote extensions from the
+// 	// previous block (which we sign now)
+// 	for _, ve := range allVEs {
+// 		cve := cmtproto.CanonicalVoteExtension{
+// 			Extension: ve,
+// 			Height:    1,
+// 			Round:     int64(0),
+// 			ChainId:   suite.baseApp.ChainID(),
+// 		}
 
-		bz, err := marshalDelimitedFn(&cve)
-		require.NoError(t, err)
+// 		bz, err := marshalDelimitedFn(&cve)
+// 		require.NoError(t, err)
 
-		extSig, err := privKey.Sign(bz)
-		require.NoError(t, err)
+// 		extSig, err := privKey.Sign(bz)
+// 		require.NoError(t, err)
 
-		prepPropReq.LocalLastCommit.Votes = append(prepPropReq.LocalLastCommit.Votes, abci.ExtendedVoteInfo{
-			VoteExtension:      ve,
-			BlockIdFlag:        cmtproto.BlockIDFlagCommit,
-			ExtensionSignature: extSig,
-		})
-	}
+// 		prepPropReq.LocalLastCommit.Votes = append(prepPropReq.LocalLastCommit.Votes, abci.ExtendedVoteInfo{
+// 			VoteExtension:      ve,
+// 			BlockIdFlag:        cmtproto.BlockIDFlagCommit,
+// 			ExtensionSignature: extSig,
+// 		})
+// 	}
 
-	prepPropReq.Height = 2
-	resp, err = suite.baseApp.PrepareProposal(prepPropReq)
-	require.NoError(t, err)
-	require.Len(t, resp.Txs, 10)
+// 	prepPropReq.Height = 2
+// 	resp, err = suite.baseApp.PrepareProposal(prepPropReq)
+// 	require.NoError(t, err)
+// 	require.Len(t, resp.Txs, 10)
 
-	procPropRes, err = suite.baseApp.ProcessProposal(&abci.RequestProcessProposal{Height: 2, Txs: resp.Txs})
-	require.NoError(t, err)
-	require.Equal(t, abci.ResponseProcessProposal_ACCEPT, procPropRes.Status)
+// 	procPropRes, err = suite.baseApp.ProcessProposal(&abci.RequestProcessProposal{Height: 2, Txs: resp.Txs})
+// 	require.NoError(t, err)
+// 	require.Equal(t, abci.ResponseProcessProposal_ACCEPT, procPropRes.Status)
 
-	_, err = suite.baseApp.FinalizeBlock(&abci.RequestFinalizeBlock{Height: 2, Txs: resp.Txs})
-	require.NoError(t, err)
+// 	_, err = suite.baseApp.FinalizeBlock(&abci.RequestFinalizeBlock{Height: 2, Txs: resp.Txs})
+// 	require.NoError(t, err)
 
-	// Check if the average price was available in FinalizeBlock's context
-	avgPrice = getFinalizeBlockStateCtx(suite.baseApp).KVStore(capKey1).Get([]byte("avgPrice"))
-	require.NotNil(t, avgPrice)
-	require.GreaterOrEqual(t, binary.BigEndian.Uint64(avgPrice), uint64(10000000))
-	require.Less(t, binary.BigEndian.Uint64(avgPrice), uint64(11000000))
+// 	// Check if the average price was available in FinalizeBlock's context
+// 	avgPrice = getFinalizeBlockStateCtx(suite.baseApp).KVStore(capKey1).Get([]byte("avgPrice"))
+// 	require.NotNil(t, avgPrice)
+// 	require.GreaterOrEqual(t, binary.BigEndian.Uint64(avgPrice), uint64(10000000))
+// 	require.Less(t, binary.BigEndian.Uint64(avgPrice), uint64(11000000))
 
-	_, err = suite.baseApp.Commit()
-	require.NoError(t, err)
+// 	_, err = suite.baseApp.Commit()
+// 	require.NoError(t, err)
 
-	// check if avgPrice was committed
-	committedAvgPrice := suite.baseApp.NewContext(true).KVStore(capKey1).Get([]byte("avgPrice"))
-	require.Equal(t, avgPrice, committedAvgPrice)
-}
+// 	// check if avgPrice was committed
+// 	committedAvgPrice := suite.baseApp.NewContext(true).KVStore(capKey1).Get([]byte("avgPrice"))
+// 	require.Equal(t, avgPrice, committedAvgPrice)
+// }
 
 func TestABCI_PrepareProposal_Panic(t *testing.T) {
 	prepareOpt := func(bapp *baseapp.BaseApp) {

@@ -18,7 +18,6 @@ import (
 	coreheader "cosmossdk.io/core/header"
 	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/store/rootmulti"
-	snapshottypes "cosmossdk.io/store/snapshots/types"
 	storetypes "cosmossdk.io/store/types"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -211,133 +210,6 @@ func (app *BaseApp) Query(_ context.Context, req *abci.RequestQuery) (resp *abci
 	}
 
 	return resp, nil
-}
-
-// ListSnapshots implements the ABCI interface. It delegates to app.snapshotManager if set.
-func (app *BaseApp) ListSnapshots(req *abci.RequestListSnapshots) (*abci.ResponseListSnapshots, error) {
-	resp := &abci.ResponseListSnapshots{Snapshots: []*abci.Snapshot{}}
-	if app.snapshotManager == nil {
-		return resp, nil
-	}
-
-	snapshots, err := app.snapshotManager.List()
-	if err != nil {
-		app.logger.Error("failed to list snapshots", "err", err)
-		return nil, err
-	}
-
-	for _, snapshot := range snapshots {
-		abciSnapshot, err := snapshot.ToABCI()
-		if err != nil {
-			app.logger.Error("failed to convert ABCI snapshots", "err", err)
-			return nil, err
-		}
-
-		resp.Snapshots = append(resp.Snapshots, &abciSnapshot)
-	}
-
-	return resp, nil
-}
-
-// LoadSnapshotChunk implements the ABCI interface. It delegates to app.snapshotManager if set.
-func (app *BaseApp) LoadSnapshotChunk(req *abci.RequestLoadSnapshotChunk) (*abci.ResponseLoadSnapshotChunk, error) {
-	if app.snapshotManager == nil {
-		return &abci.ResponseLoadSnapshotChunk{}, nil
-	}
-
-	chunk, err := app.snapshotManager.LoadChunk(req.Height, req.Format, req.Chunk)
-	if err != nil {
-		app.logger.Error(
-			"failed to load snapshot chunk",
-			"height", req.Height,
-			"format", req.Format,
-			"chunk", req.Chunk,
-			"err", err,
-		)
-		return nil, err
-	}
-
-	return &abci.ResponseLoadSnapshotChunk{Chunk: chunk}, nil
-}
-
-// OfferSnapshot implements the ABCI interface. It delegates to app.snapshotManager if set.
-func (app *BaseApp) OfferSnapshot(req *abci.RequestOfferSnapshot) (*abci.ResponseOfferSnapshot, error) {
-	if app.snapshotManager == nil {
-		app.logger.Error("snapshot manager not configured")
-		return &abci.ResponseOfferSnapshot{Result: abci.ResponseOfferSnapshot_ABORT}, nil
-	}
-
-	if req.Snapshot == nil {
-		app.logger.Error("received nil snapshot")
-		return &abci.ResponseOfferSnapshot{Result: abci.ResponseOfferSnapshot_REJECT}, nil
-	}
-
-	snapshot, err := snapshottypes.SnapshotFromABCI(req.Snapshot)
-	if err != nil {
-		app.logger.Error("failed to decode snapshot metadata", "err", err)
-		return &abci.ResponseOfferSnapshot{Result: abci.ResponseOfferSnapshot_REJECT}, nil
-	}
-
-	err = app.snapshotManager.Restore(snapshot)
-	switch {
-	case err == nil:
-		return &abci.ResponseOfferSnapshot{Result: abci.ResponseOfferSnapshot_ACCEPT}, nil
-
-	case errors.Is(err, snapshottypes.ErrUnknownFormat):
-		return &abci.ResponseOfferSnapshot{Result: abci.ResponseOfferSnapshot_REJECT_FORMAT}, nil
-
-	case errors.Is(err, snapshottypes.ErrInvalidMetadata):
-		app.logger.Error(
-			"rejecting invalid snapshot",
-			"height", req.Snapshot.Height,
-			"format", req.Snapshot.Format,
-			"err", err,
-		)
-		return &abci.ResponseOfferSnapshot{Result: abci.ResponseOfferSnapshot_REJECT}, nil
-
-	default:
-		app.logger.Error(
-			"failed to restore snapshot",
-			"height", req.Snapshot.Height,
-			"format", req.Snapshot.Format,
-			"err", err,
-		)
-
-		// We currently don't support resetting the IAVL stores and retrying a
-		// different snapshot, so we ask CometBFT to abort all snapshot restoration.
-		return &abci.ResponseOfferSnapshot{Result: abci.ResponseOfferSnapshot_ABORT}, nil
-	}
-}
-
-// ApplySnapshotChunk implements the ABCI interface. It delegates to app.snapshotManager if set.
-func (app *BaseApp) ApplySnapshotChunk(req *abci.RequestApplySnapshotChunk) (*abci.ResponseApplySnapshotChunk, error) {
-	if app.snapshotManager == nil {
-		app.logger.Error("snapshot manager not configured")
-		return &abci.ResponseApplySnapshotChunk{Result: abci.ResponseApplySnapshotChunk_ABORT}, nil
-	}
-
-	_, err := app.snapshotManager.RestoreChunk(req.Chunk)
-	switch {
-	case err == nil:
-		return &abci.ResponseApplySnapshotChunk{Result: abci.ResponseApplySnapshotChunk_ACCEPT}, nil
-
-	case errors.Is(err, snapshottypes.ErrChunkHashMismatch):
-		app.logger.Error(
-			"chunk checksum mismatch; rejecting sender and requesting refetch",
-			"chunk", req.Index,
-			"sender", req.Sender,
-			"err", err,
-		)
-		return &abci.ResponseApplySnapshotChunk{
-			Result:        abci.ResponseApplySnapshotChunk_RETRY,
-			RefetchChunks: []uint32{req.Index},
-			RejectSenders: []string{req.Sender},
-		}, nil
-
-	default:
-		app.logger.Error("failed to restore snapshot", "err", err)
-		return &abci.ResponseApplySnapshotChunk{Result: abci.ResponseApplySnapshotChunk_ABORT}, nil
-	}
 }
 
 // CheckTx implements the ABCI interface and executes a tx in CheckTx mode. In
@@ -552,6 +424,7 @@ func (app *BaseApp) ProcessProposal(req *abci.RequestProcessProposal) (resp *abc
 	return resp, nil
 }
 
+/*
 // ExtendVote implements the ExtendVote ABCI method and returns a ResponseExtendVote.
 // It calls the application's ExtendVote handler which is responsible for performing
 // application-specific business logic when sending a pre-commit for the NEXT
@@ -685,6 +558,7 @@ func (app *BaseApp) VerifyVoteExtension(req *abci.RequestVerifyVoteExtension) (r
 
 	return resp, err
 }
+*/
 
 // internalFinalizeBlock executes the block, called by the Optimistic
 // Execution flow or by the FinalizeBlock ABCI method. The context received is

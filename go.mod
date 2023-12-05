@@ -4,6 +4,10 @@ toolchain go1.21.0
 
 module github.com/cosmos/cosmos-sdk
 
+// reece/gordian-abci-fork
+// - removes unused ABCI types (snapshots, extended votes)
+replace github.com/cometbft/cometbft => /home/reece/Desktop/Programming/Go/cometbft
+
 require (
 	cosmossdk.io/api v0.7.2
 	cosmossdk.io/collections v0.4.0

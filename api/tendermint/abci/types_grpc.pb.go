@@ -19,22 +19,16 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	ABCI_Echo_FullMethodName                = "/tendermint.abci.ABCI/Echo"
-	ABCI_Flush_FullMethodName               = "/tendermint.abci.ABCI/Flush"
-	ABCI_Info_FullMethodName                = "/tendermint.abci.ABCI/Info"
-	ABCI_CheckTx_FullMethodName             = "/tendermint.abci.ABCI/CheckTx"
-	ABCI_Query_FullMethodName               = "/tendermint.abci.ABCI/Query"
-	ABCI_Commit_FullMethodName              = "/tendermint.abci.ABCI/Commit"
-	ABCI_InitChain_FullMethodName           = "/tendermint.abci.ABCI/InitChain"
-	ABCI_ListSnapshots_FullMethodName       = "/tendermint.abci.ABCI/ListSnapshots"
-	ABCI_OfferSnapshot_FullMethodName       = "/tendermint.abci.ABCI/OfferSnapshot"
-	ABCI_LoadSnapshotChunk_FullMethodName   = "/tendermint.abci.ABCI/LoadSnapshotChunk"
-	ABCI_ApplySnapshotChunk_FullMethodName  = "/tendermint.abci.ABCI/ApplySnapshotChunk"
-	ABCI_PrepareProposal_FullMethodName     = "/tendermint.abci.ABCI/PrepareProposal"
-	ABCI_ProcessProposal_FullMethodName     = "/tendermint.abci.ABCI/ProcessProposal"
-	ABCI_ExtendVote_FullMethodName          = "/tendermint.abci.ABCI/ExtendVote"
-	ABCI_VerifyVoteExtension_FullMethodName = "/tendermint.abci.ABCI/VerifyVoteExtension"
-	ABCI_FinalizeBlock_FullMethodName       = "/tendermint.abci.ABCI/FinalizeBlock"
+	ABCI_Echo_FullMethodName            = "/tendermint.abci.ABCI/Echo"
+	ABCI_Flush_FullMethodName           = "/tendermint.abci.ABCI/Flush"
+	ABCI_Info_FullMethodName            = "/tendermint.abci.ABCI/Info"
+	ABCI_CheckTx_FullMethodName         = "/tendermint.abci.ABCI/CheckTx"
+	ABCI_Query_FullMethodName           = "/tendermint.abci.ABCI/Query"
+	ABCI_Commit_FullMethodName          = "/tendermint.abci.ABCI/Commit"
+	ABCI_InitChain_FullMethodName       = "/tendermint.abci.ABCI/InitChain"
+	ABCI_PrepareProposal_FullMethodName = "/tendermint.abci.ABCI/PrepareProposal"
+	ABCI_ProcessProposal_FullMethodName = "/tendermint.abci.ABCI/ProcessProposal"
+	ABCI_FinalizeBlock_FullMethodName   = "/tendermint.abci.ABCI/FinalizeBlock"
 )
 
 // ABCIClient is the client API for ABCI service.
@@ -48,14 +42,14 @@ type ABCIClient interface {
 	Query(ctx context.Context, in *RequestQuery, opts ...grpc.CallOption) (*ResponseQuery, error)
 	Commit(ctx context.Context, in *RequestCommit, opts ...grpc.CallOption) (*ResponseCommit, error)
 	InitChain(ctx context.Context, in *RequestInitChain, opts ...grpc.CallOption) (*ResponseInitChain, error)
-	ListSnapshots(ctx context.Context, in *RequestListSnapshots, opts ...grpc.CallOption) (*ResponseListSnapshots, error)
-	OfferSnapshot(ctx context.Context, in *RequestOfferSnapshot, opts ...grpc.CallOption) (*ResponseOfferSnapshot, error)
-	LoadSnapshotChunk(ctx context.Context, in *RequestLoadSnapshotChunk, opts ...grpc.CallOption) (*ResponseLoadSnapshotChunk, error)
-	ApplySnapshotChunk(ctx context.Context, in *RequestApplySnapshotChunk, opts ...grpc.CallOption) (*ResponseApplySnapshotChunk, error)
+	// rpc ListSnapshots(RequestListSnapshots) returns (ResponseListSnapshots);
+	// rpc OfferSnapshot(RequestOfferSnapshot) returns (ResponseOfferSnapshot);
+	// rpc LoadSnapshotChunk(RequestLoadSnapshotChunk) returns (ResponseLoadSnapshotChunk);
+	// rpc ApplySnapshotChunk(RequestApplySnapshotChunk) returns (ResponseApplySnapshotChunk);
 	PrepareProposal(ctx context.Context, in *RequestPrepareProposal, opts ...grpc.CallOption) (*ResponsePrepareProposal, error)
 	ProcessProposal(ctx context.Context, in *RequestProcessProposal, opts ...grpc.CallOption) (*ResponseProcessProposal, error)
-	ExtendVote(ctx context.Context, in *RequestExtendVote, opts ...grpc.CallOption) (*ResponseExtendVote, error)
-	VerifyVoteExtension(ctx context.Context, in *RequestVerifyVoteExtension, opts ...grpc.CallOption) (*ResponseVerifyVoteExtension, error)
+	// rpc ExtendVote(RequestExtendVote) returns (ResponseExtendVote);
+	// rpc VerifyVoteExtension(RequestVerifyVoteExtension) returns (ResponseVerifyVoteExtension);
 	FinalizeBlock(ctx context.Context, in *RequestFinalizeBlock, opts ...grpc.CallOption) (*ResponseFinalizeBlock, error)
 }
 
@@ -130,42 +124,6 @@ func (c *aBCIClient) InitChain(ctx context.Context, in *RequestInitChain, opts .
 	return out, nil
 }
 
-func (c *aBCIClient) ListSnapshots(ctx context.Context, in *RequestListSnapshots, opts ...grpc.CallOption) (*ResponseListSnapshots, error) {
-	out := new(ResponseListSnapshots)
-	err := c.cc.Invoke(ctx, ABCI_ListSnapshots_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *aBCIClient) OfferSnapshot(ctx context.Context, in *RequestOfferSnapshot, opts ...grpc.CallOption) (*ResponseOfferSnapshot, error) {
-	out := new(ResponseOfferSnapshot)
-	err := c.cc.Invoke(ctx, ABCI_OfferSnapshot_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *aBCIClient) LoadSnapshotChunk(ctx context.Context, in *RequestLoadSnapshotChunk, opts ...grpc.CallOption) (*ResponseLoadSnapshotChunk, error) {
-	out := new(ResponseLoadSnapshotChunk)
-	err := c.cc.Invoke(ctx, ABCI_LoadSnapshotChunk_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *aBCIClient) ApplySnapshotChunk(ctx context.Context, in *RequestApplySnapshotChunk, opts ...grpc.CallOption) (*ResponseApplySnapshotChunk, error) {
-	out := new(ResponseApplySnapshotChunk)
-	err := c.cc.Invoke(ctx, ABCI_ApplySnapshotChunk_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *aBCIClient) PrepareProposal(ctx context.Context, in *RequestPrepareProposal, opts ...grpc.CallOption) (*ResponsePrepareProposal, error) {
 	out := new(ResponsePrepareProposal)
 	err := c.cc.Invoke(ctx, ABCI_PrepareProposal_FullMethodName, in, out, opts...)
@@ -178,24 +136,6 @@ func (c *aBCIClient) PrepareProposal(ctx context.Context, in *RequestPrepareProp
 func (c *aBCIClient) ProcessProposal(ctx context.Context, in *RequestProcessProposal, opts ...grpc.CallOption) (*ResponseProcessProposal, error) {
 	out := new(ResponseProcessProposal)
 	err := c.cc.Invoke(ctx, ABCI_ProcessProposal_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *aBCIClient) ExtendVote(ctx context.Context, in *RequestExtendVote, opts ...grpc.CallOption) (*ResponseExtendVote, error) {
-	out := new(ResponseExtendVote)
-	err := c.cc.Invoke(ctx, ABCI_ExtendVote_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *aBCIClient) VerifyVoteExtension(ctx context.Context, in *RequestVerifyVoteExtension, opts ...grpc.CallOption) (*ResponseVerifyVoteExtension, error) {
-	out := new(ResponseVerifyVoteExtension)
-	err := c.cc.Invoke(ctx, ABCI_VerifyVoteExtension_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -222,14 +162,14 @@ type ABCIServer interface {
 	Query(context.Context, *RequestQuery) (*ResponseQuery, error)
 	Commit(context.Context, *RequestCommit) (*ResponseCommit, error)
 	InitChain(context.Context, *RequestInitChain) (*ResponseInitChain, error)
-	ListSnapshots(context.Context, *RequestListSnapshots) (*ResponseListSnapshots, error)
-	OfferSnapshot(context.Context, *RequestOfferSnapshot) (*ResponseOfferSnapshot, error)
-	LoadSnapshotChunk(context.Context, *RequestLoadSnapshotChunk) (*ResponseLoadSnapshotChunk, error)
-	ApplySnapshotChunk(context.Context, *RequestApplySnapshotChunk) (*ResponseApplySnapshotChunk, error)
+	// rpc ListSnapshots(RequestListSnapshots) returns (ResponseListSnapshots);
+	// rpc OfferSnapshot(RequestOfferSnapshot) returns (ResponseOfferSnapshot);
+	// rpc LoadSnapshotChunk(RequestLoadSnapshotChunk) returns (ResponseLoadSnapshotChunk);
+	// rpc ApplySnapshotChunk(RequestApplySnapshotChunk) returns (ResponseApplySnapshotChunk);
 	PrepareProposal(context.Context, *RequestPrepareProposal) (*ResponsePrepareProposal, error)
 	ProcessProposal(context.Context, *RequestProcessProposal) (*ResponseProcessProposal, error)
-	ExtendVote(context.Context, *RequestExtendVote) (*ResponseExtendVote, error)
-	VerifyVoteExtension(context.Context, *RequestVerifyVoteExtension) (*ResponseVerifyVoteExtension, error)
+	// rpc ExtendVote(RequestExtendVote) returns (ResponseExtendVote);
+	// rpc VerifyVoteExtension(RequestVerifyVoteExtension) returns (ResponseVerifyVoteExtension);
 	FinalizeBlock(context.Context, *RequestFinalizeBlock) (*ResponseFinalizeBlock, error)
 	mustEmbedUnimplementedABCIServer()
 }
@@ -259,29 +199,11 @@ func (UnimplementedABCIServer) Commit(context.Context, *RequestCommit) (*Respons
 func (UnimplementedABCIServer) InitChain(context.Context, *RequestInitChain) (*ResponseInitChain, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InitChain not implemented")
 }
-func (UnimplementedABCIServer) ListSnapshots(context.Context, *RequestListSnapshots) (*ResponseListSnapshots, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListSnapshots not implemented")
-}
-func (UnimplementedABCIServer) OfferSnapshot(context.Context, *RequestOfferSnapshot) (*ResponseOfferSnapshot, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method OfferSnapshot not implemented")
-}
-func (UnimplementedABCIServer) LoadSnapshotChunk(context.Context, *RequestLoadSnapshotChunk) (*ResponseLoadSnapshotChunk, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method LoadSnapshotChunk not implemented")
-}
-func (UnimplementedABCIServer) ApplySnapshotChunk(context.Context, *RequestApplySnapshotChunk) (*ResponseApplySnapshotChunk, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ApplySnapshotChunk not implemented")
-}
 func (UnimplementedABCIServer) PrepareProposal(context.Context, *RequestPrepareProposal) (*ResponsePrepareProposal, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PrepareProposal not implemented")
 }
 func (UnimplementedABCIServer) ProcessProposal(context.Context, *RequestProcessProposal) (*ResponseProcessProposal, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ProcessProposal not implemented")
-}
-func (UnimplementedABCIServer) ExtendVote(context.Context, *RequestExtendVote) (*ResponseExtendVote, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ExtendVote not implemented")
-}
-func (UnimplementedABCIServer) VerifyVoteExtension(context.Context, *RequestVerifyVoteExtension) (*ResponseVerifyVoteExtension, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method VerifyVoteExtension not implemented")
 }
 func (UnimplementedABCIServer) FinalizeBlock(context.Context, *RequestFinalizeBlock) (*ResponseFinalizeBlock, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FinalizeBlock not implemented")
@@ -425,78 +347,6 @@ func _ABCI_InitChain_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ABCI_ListSnapshots_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestListSnapshots)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ABCIServer).ListSnapshots(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ABCI_ListSnapshots_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ABCIServer).ListSnapshots(ctx, req.(*RequestListSnapshots))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ABCI_OfferSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestOfferSnapshot)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ABCIServer).OfferSnapshot(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ABCI_OfferSnapshot_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ABCIServer).OfferSnapshot(ctx, req.(*RequestOfferSnapshot))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ABCI_LoadSnapshotChunk_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestLoadSnapshotChunk)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ABCIServer).LoadSnapshotChunk(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ABCI_LoadSnapshotChunk_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ABCIServer).LoadSnapshotChunk(ctx, req.(*RequestLoadSnapshotChunk))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ABCI_ApplySnapshotChunk_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestApplySnapshotChunk)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ABCIServer).ApplySnapshotChunk(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ABCI_ApplySnapshotChunk_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ABCIServer).ApplySnapshotChunk(ctx, req.(*RequestApplySnapshotChunk))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _ABCI_PrepareProposal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RequestPrepareProposal)
 	if err := dec(in); err != nil {
@@ -529,42 +379,6 @@ func _ABCI_ProcessProposal_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ABCIServer).ProcessProposal(ctx, req.(*RequestProcessProposal))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ABCI_ExtendVote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestExtendVote)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ABCIServer).ExtendVote(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ABCI_ExtendVote_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ABCIServer).ExtendVote(ctx, req.(*RequestExtendVote))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ABCI_VerifyVoteExtension_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestVerifyVoteExtension)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ABCIServer).VerifyVoteExtension(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ABCI_VerifyVoteExtension_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ABCIServer).VerifyVoteExtension(ctx, req.(*RequestVerifyVoteExtension))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -623,36 +437,12 @@ var ABCI_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ABCI_InitChain_Handler,
 		},
 		{
-			MethodName: "ListSnapshots",
-			Handler:    _ABCI_ListSnapshots_Handler,
-		},
-		{
-			MethodName: "OfferSnapshot",
-			Handler:    _ABCI_OfferSnapshot_Handler,
-		},
-		{
-			MethodName: "LoadSnapshotChunk",
-			Handler:    _ABCI_LoadSnapshotChunk_Handler,
-		},
-		{
-			MethodName: "ApplySnapshotChunk",
-			Handler:    _ABCI_ApplySnapshotChunk_Handler,
-		},
-		{
 			MethodName: "PrepareProposal",
 			Handler:    _ABCI_PrepareProposal_Handler,
 		},
 		{
 			MethodName: "ProcessProposal",
 			Handler:    _ABCI_ProcessProposal_Handler,
-		},
-		{
-			MethodName: "ExtendVote",
-			Handler:    _ABCI_ExtendVote_Handler,
-		},
-		{
-			MethodName: "VerifyVoteExtension",
-			Handler:    _ABCI_VerifyVoteExtension_Handler,
 		},
 		{
 			MethodName: "FinalizeBlock",
