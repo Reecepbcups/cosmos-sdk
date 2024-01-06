@@ -219,8 +219,8 @@ func newKeystore(kr keyring.Keyring, cdc codec.Codec, backend string, opts ...Op
 	// Default options for keybase, these can be overwritten using the
 	// Option function
 	options := Options{
-		SupportedAlgos:       SigningAlgoList{hd.Secp256k1}, // TODO:hd.EthSecp256k1Type
-		SupportedAlgosLedger: SigningAlgoList{hd.Secp256k1},
+		SupportedAlgos:       SigningAlgoList{hd.Secp256k1, hd.EthSecp256k1},
+		SupportedAlgosLedger: SigningAlgoList{hd.Secp256k1, hd.EthSecp256k1},
 	}
 
 	for _, optionFn := range opts {
@@ -592,10 +592,10 @@ func (ks keystore) NewAccount(name, mnemonic, bip39Passphrase, hdPath string, al
 
 	// check if the key already exists with the same address and return an error
 	// if found
-	address := sdk.AccAddress(privKey.PubKey().Address())
-	if _, err := ks.KeyByAddress(address); err == nil {
-		return nil, ErrDuplicatedAddress
-	}
+	// address := sdk.AccAddress(privKey.PubKey().Address()) // TODO:
+	// if _, err := ks.KeyByAddress(address); err == nil {
+	// 	return nil, ErrDuplicatedAddress
+	// }
 
 	return ks.writeLocalKey(name, privKey)
 }

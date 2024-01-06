@@ -22,9 +22,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/cosmos/cosmos-sdk/crypto/keys/eth_crypto/common"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/eth_crypto/common/hexutil"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/eth_crypto/common/math"
 )
 
 var (

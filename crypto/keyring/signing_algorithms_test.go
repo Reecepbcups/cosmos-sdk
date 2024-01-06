@@ -26,6 +26,13 @@ func TestNewSigningAlgoByString(t *testing.T) {
 			nil,
 		},
 		{
+			"supported algorithm",
+			"ethsecp256k1",
+			true,
+			hd.EthSecp256k1,
+			nil,
+		},
+		{
 			"not supported",
 			"notsupportedalgo",
 			false,
@@ -34,13 +41,17 @@ func TestNewSigningAlgoByString(t *testing.T) {
 		},
 	}
 
-	list := SigningAlgoList{hd.Secp256k1}
+	list := SigningAlgoList{hd.Secp256k1, hd.EthSecp256k1}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			algorithm, err := NewSigningAlgoFromString(tt.algoStr, list)
 			if tt.isSupported {
-				require.Equal(t, hd.Secp256k1, algorithm)
+				if tt.algoStr == "secp256k1" {
+					require.Equal(t, hd.Secp256k1, algorithm)
+				} else if tt.algoStr == "ethsecp256k1" {
+					require.Equal(t, hd.EthSecp256k1, algorithm)
+				}
 			} else {
 				require.ErrorIs(t, err, tt.expectedErr)
 			}

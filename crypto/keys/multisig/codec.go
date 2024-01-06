@@ -29,7 +29,7 @@ func init() {
 	AminoCdc.RegisterConcrete(&secp256k1.PubKey{},
 		secp256k1.PubKeyName, nil)
 	AminoCdc.RegisterConcrete(&ethsecp256k1.PubKey{},
-		secp256k1.PubKeyName, nil)
+		ethsecp256k1.PubKeyName, nil)
 	AminoCdc.RegisterConcrete(&LegacyAminoPubKey{},
 		PubKeyAminoRoute, nil)
 }

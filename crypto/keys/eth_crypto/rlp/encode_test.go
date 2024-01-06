@@ -26,7 +26,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/eth_crypto/common/math"
 	"github.com/holiman/uint256"
 )
 
