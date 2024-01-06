@@ -1,0 +1,23 @@
+syntax = "proto3";
+package cosmos.crypto.ethsecp256k1;
+
+import "amino/amino.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/cosmos/cosmos-sdk/crypto/keys/ethsecp256k1";
+
+message PubKey {
+  option (amino.name)                 = "tendermint/PubKeyEthSecp256k1";
+  option (amino.message_encoding)     = "key_field";
+  option (gogoproto.goproto_stringer) = false;
+
+  bytes key = 1;
+}
+
+// PrivKey defines a ethsecp256k1 private key.
+message PrivKey {
+  option (amino.name)             = "tendermint/PrivKeyEthSecp256k1";
+  option (amino.message_encoding) = "key_field";
+
+  bytes key = 1;
+}

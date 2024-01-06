@@ -28,14 +28,13 @@ const (
 // ----------------------------------------------------------------------------
 // secp256k1 Private Key
 
-var _ cryptotypes.LedgerPrivKey = (*PrivKey)(nil)
 var _ cryptotypes.PrivKey = (*PrivKey)(nil)
 
 // PrivKey defines a type alias for an ecdsa.PrivateKey that implements
 // Tendermint's PrivateKey interface.
-type PrivKey struct {
-	Key []byte `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-}
+// type PrivKey struct {
+// 	Key []byte `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+// }
 
 // Type implements crypto.PrivKey.
 func (PrivKey) Type() string {
@@ -56,7 +55,7 @@ func GenerateKey() (PrivKey, error) {
 // PubKey returns the ECDSA private key's public key.
 func (privkey PrivKey) PubKey() cryptotypes.PubKey {
 	ecdsaPKey := privkey.ToECDSA()
-	return &PubKey{PublicKey: ethcrypto.CompressPubkey(&ecdsaPKey.PublicKey)}
+	return &PubKey{Key: ethcrypto.CompressPubkey(&ecdsaPKey.PublicKey)}
 }
 
 // Bytes returns the raw ECDSA private key bytes.
@@ -87,34 +86,10 @@ func (privkey PrivKey) ToECDSA() *ecdsa.PrivateKey {
 	return key
 }
 
-// ProtoMessage implements types.PrivKey.
-func (*PrivKey) ProtoMessage() {
-}
-
-// Reset implements types.PrivKey.
-func (pk *PrivKey) Reset() {
-	pk = nil
-}
-
-// String implements types.PrivKey.
-func (*PrivKey) String() string {
-	return "PrivKey_PubKeySecp256k1"
-}
-
 // ----------------------------------------------------------------------------
 // secp256k1 Public Key
 
 var _ cryptotypes.PubKey = (*PubKey)(nil)
-
-// PubKey defines a type alias for an ecdsa.PublicKey that implements Tendermint's PubKey
-// interface. It represents the 33-byte compressed public key format.
-type PubKey struct {
-	PublicKey []byte
-}
-
-// ProtoMessage implements types.PubKey.
-func (*PubKey) ProtoMessage() {
-}
 
 // Type implements types.PubKey.
 func (*PubKey) Type() string {
@@ -123,8 +98,8 @@ func (*PubKey) Type() string {
 
 // Address returns the address of the ECDSA public key.
 // The function will panic if the public key is invalid.
-func (key PubKey) Address() cryptotypes.Address {
-	pubk, err := ethcrypto.DecompressPubkey(key.PublicKey)
+func (key *PubKey) Address() cryptotypes.Address {
+	pubk, err := ethcrypto.DecompressPubkey(key.Key)
 	if err != nil {
 		panic(err)
 	}
@@ -134,13 +109,13 @@ func (key PubKey) Address() cryptotypes.Address {
 
 // Bytes returns the raw bytes of the ECDSA public key.
 // The function panics if the key cannot be marshaled to bytes.
-func (key PubKey) Bytes() []byte {
+func (key *PubKey) Bytes() []byte {
 	// bz, err := CryptoCodec.MarshalBinaryBare(key)
 	// if err != nil {
 	// 	panic(err)
 	// }
 	// return bz
-	return key.PublicKey
+	return key.Key
 }
 
 // VerifyBytes verifies that the ECDSA public key created a given signature over
@@ -161,12 +136,7 @@ func (key *PubKey) Equals(other cryptotypes.PubKey) bool {
 	return bytes.Equal(key.Bytes(), other.Bytes())
 }
 
-// Reset implements types.PubKey.
-func (pk *PubKey) Reset() {
-	pk = nil
-}
-
 // String implements types.PubKey.
 func (*PubKey) String() string {
-	return "Ethermint_PubKeySecp256k1"
+	return ""
 }
