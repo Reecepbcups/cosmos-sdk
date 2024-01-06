@@ -15,6 +15,8 @@ const (
 	MultiType = PubKeyType("multi")
 	// Secp256k1Type uses the Bitcoin secp256k1 ECDSA parameters.
 	Secp256k1Type = PubKeyType("secp256k1")
+	// EthSecp256k1Type uses the Ethereum secp256k1 ECDSA parameters.
+	EthSecp256k1Type = PubKeyType("eth_secp256k1")
 	// Ed25519Type represents the Ed25519Type signature system.
 	// It is currently not supported for end-user keys (wallets/ledgers).
 	Ed25519Type = PubKeyType("ed25519")
