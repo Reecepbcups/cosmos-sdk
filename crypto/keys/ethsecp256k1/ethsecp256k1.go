@@ -59,7 +59,7 @@ func (privkey PrivKey) PubKey() tmcrypto.PubKey {
 // Bytes returns the raw ECDSA private key bytes.
 func (privkey PrivKey) Bytes() []byte {
 	// return CryptoCodec.MustMarshalBinaryBare(privkey)
-	return privkey.Bytes()
+	return privkey
 }
 
 // Sign creates a recoverable ECDSA signature on the secp256k1 curve over the
@@ -116,7 +116,7 @@ func (key PubKey) Bytes() []byte {
 	// 	panic(err)
 	// }
 	// return bz
-	return key.Bytes()
+	return key
 }
 
 // Type implements crypto.PubKey.
