@@ -590,12 +590,16 @@ func (ks keystore) NewAccount(name, mnemonic, bip39Passphrase, hdPath string, al
 
 	privKey := algo.Generate()(derivedPriv)
 
+	fmt.Println("Your key phrase is", mnemonic)
+	fmt.Println("derivedPriv", derivedPriv)
+	fmt.Println("privKey", privKey)
+
 	// check if the key already exists with the same address and return an error
 	// if found
-	// address := sdk.AccAddress(privKey.PubKey().Address()) // TODO:
-	// if _, err := ks.KeyByAddress(address); err == nil {
-	// 	return nil, ErrDuplicatedAddress
-	// }
+	address := sdk.AccAddress(privKey.PubKey().Address())
+	if _, err := ks.KeyByAddress(address); err == nil {
+		return nil, ErrDuplicatedAddress
+	}
 
 	return ks.writeLocalKey(name, privKey)
 }

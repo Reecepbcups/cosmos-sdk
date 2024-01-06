@@ -6,6 +6,7 @@ import (
 
 	ethcrypto "github.com/cosmos/cosmos-sdk/crypto/keys/eth_crypto"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/eth_crypto/secp256k1"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 
 	tmcrypto "github.com/cometbft/cometbft/crypto"
 )
@@ -26,13 +27,16 @@ const (
 )
 
 // ----------------------------------------------------------------------------
-// secp256k1 Private Key
+// ethsecp256k1 Private Key
 
-var _ tmcrypto.PrivKey = PrivKey{}
+var _ cryptotypes.PrivKey = (*PrivKey)(nil)
 
 // PrivKey defines a type alias for an ecdsa.PrivateKey that implements
 // Tendermint's PrivateKey interface.
-type PrivKey []byte
+// type PrivKey []byte
+type PrivKey struct {
+	Key []byte `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+}
 
 // Type implements crypto.PrivKey.
 func (PrivKey) Type() string {
@@ -47,11 +51,11 @@ func GenerateKey() (PrivKey, error) {
 		return PrivKey{}, err
 	}
 
-	return PrivKey(ethcrypto.FromECDSA(priv)), nil
+	return PrivKey{Key: ethcrypto.FromECDSA(priv)}, nil
 }
 
 // PubKey returns the ECDSA private key's public key.
-func (privkey PrivKey) PubKey() tmcrypto.PubKey {
+func (privkey PrivKey) PubKey() cryptotypes.PubKey {
 	ecdsaPKey := privkey.ToECDSA()
 	return PubKey(ethcrypto.CompressPubkey(&ecdsaPKey.PublicKey))
 }
@@ -59,7 +63,7 @@ func (privkey PrivKey) PubKey() tmcrypto.PubKey {
 // Bytes returns the raw ECDSA private key bytes.
 func (privkey PrivKey) Bytes() []byte {
 	// return CryptoCodec.MustMarshalBinaryBare(privkey)
-	return privkey
+	return privkey.Key
 }
 
 // Sign creates a recoverable ECDSA signature on the secp256k1 curve over the
@@ -70,7 +74,7 @@ func (privkey PrivKey) Sign(msg []byte) ([]byte, error) {
 }
 
 // Equals returns true if two ECDSA private keys are equal and false otherwise.
-func (privkey PrivKey) Equals(other tmcrypto.PrivKey) bool {
+func (privkey PrivKey) Equals(other cryptotypes.LedgerPrivKey) bool {
 	if other, ok := other.(PrivKey); ok {
 		return bytes.Equal(privkey.Bytes(), other.Bytes())
 	}
@@ -78,10 +82,14 @@ func (privkey PrivKey) Equals(other tmcrypto.PrivKey) bool {
 	return false
 }
 
+func (m *PrivKey) Reset()         { *m = PrivKey{} }
+func (m *PrivKey) String() string { return "EthSecp256k1" }
+func (*PrivKey) ProtoMessage()    {}
+
 // ToECDSA returns the ECDSA private key as a reference to ecdsa.PrivateKey type.
 // The function will panic if the private key is invalid.
 func (privkey PrivKey) ToECDSA() *ecdsa.PrivateKey {
-	key, err := ethcrypto.ToECDSA(privkey)
+	key, err := ethcrypto.ToECDSA(privkey.Key)
 	if err != nil {
 		panic(err)
 	}
@@ -91,7 +99,7 @@ func (privkey PrivKey) ToECDSA() *ecdsa.PrivateKey {
 // ----------------------------------------------------------------------------
 // secp256k1 Public Key
 
-var _ tmcrypto.PubKey = (*PubKey)(nil)
+var _ cryptotypes.PubKey = (*PubKey)(nil)
 
 // PubKey defines a type alias for an ecdsa.PublicKey that implements Tendermint's PubKey
 // interface. It represents the 33-byte compressed public key format.
@@ -139,10 +147,19 @@ func (key PubKey) VerifySignature(msg []byte, sig []byte) bool {
 }
 
 // Equals returns true if two ECDSA public keys are equal and false otherwise.
-func (key PubKey) Equals(other tmcrypto.PubKey) bool {
-	if other, ok := other.(PubKey); ok {
-		return bytes.Equal(key.Bytes(), other.Bytes())
-	}
+func (key PubKey) Equals(other cryptotypes.PubKey) bool {
+	return bytes.Equal(key.Bytes(), other.Bytes())
+}
 
-	return false
+// ProtoMessage implements types.PubKey.
+func (PubKey) ProtoMessage() {
+}
+
+// Reset implements types.PubKey.
+func (pk PubKey) Reset() {
+}
+
+// String implements types.PubKey.
+func (PubKey) String() string {
+	return ""
 }

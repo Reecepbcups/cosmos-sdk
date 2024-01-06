@@ -8,7 +8,8 @@ import (
 	ethcrypto "github.com/cosmos/cosmos-sdk/crypto/keys/eth_crypto"
 	ethsecp256k1 "github.com/cosmos/cosmos-sdk/crypto/keys/eth_crypto/secp256k1"
 
-	tmcrypto "github.com/cometbft/cometbft/crypto"
+	// tmcrypto "github.com/cometbft/cometbft/crypto"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 )
 
 func TestPrivKeyPrivKey(t *testing.T) {
@@ -16,7 +17,7 @@ func TestPrivKeyPrivKey(t *testing.T) {
 	privKey, err := GenerateKey()
 	require.NoError(t, err)
 	require.True(t, privKey.Equals(privKey))
-	require.Implements(t, (*tmcrypto.PrivKey)(nil), privKey)
+	require.Implements(t, (*cryptotypes.PrivKey)(nil), privKey)
 
 	// validate inequality
 	privKey2, err := GenerateKey()
@@ -31,7 +32,7 @@ func TestPrivKeyPrivKey(t *testing.T) {
 	// validate we can sign some bytes
 	msg := []byte("hello world")
 	sigHash := ethcrypto.Keccak256Hash(msg)
-	expectedSig, _ := ethsecp256k1.Sign(sigHash.Bytes(), privKey)
+	expectedSig, _ := ethsecp256k1.Sign(sigHash.Bytes(), privKey.Key)
 
 	sig, err := privKey.Sign(msg)
 	require.NoError(t, err)
@@ -44,7 +45,7 @@ func TestPrivKeyPubKey(t *testing.T) {
 
 	// validate type and equality
 	pubKey := privKey.PubKey().(PubKey)
-	require.Implements(t, (*tmcrypto.PubKey)(nil), pubKey)
+	require.Implements(t, (*cryptotypes.PubKey)(nil), pubKey)
 
 	// validate inequality
 	privKey2, err := GenerateKey()
