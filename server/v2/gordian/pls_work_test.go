@@ -5,12 +5,12 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/neilotoole/slogt"
 	"github.com/rollchains/gordian/gcrypto"
@@ -39,6 +39,8 @@ func signerFromInsecurePassphrase(insecurePassphrase string) (gcrypto.Ed25519Sig
 }
 
 func TestGordianEngine(t *testing.T) {
+	var signer gcrypto.Signer
+	var err error
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -49,8 +51,26 @@ func TestGordianEngine(t *testing.T) {
 	// genesis := fx.DefaultGenesis()
 	initAppState := strings.NewReader(`{"app_state": {"key", "value"}}`)
 
-	var signer gcrypto.Signer
-	var err error
+	// storageDB, err := pebbledb.New(t.TempDir())
+	// require.NoError(t, err)
+	// ss, _ := ammstore.New(storageDB)
+
+	// b := appmanager.Builder[mock.Tx]{
+	// 	// STF:                s, // TODO: ?
+	// 	DB:                 ss,
+	// 	ValidateTxGasLimit: 100_000,
+	// 	QueryGasLimit:      100_000,
+	// 	SimulationGasLimit: 100_000,
+	// }
+
+	// am, err := b.Build()
+	// require.NoError(t, err)
+
+	// mockStore := NewMockStore()
+
+	// TODO: so we can plug into the app
+	// c := NewConsensus[mock.Tx](am, mempool.NoOpMempool[mock.Tx]{}, mockStore, Config{}, mock.TxCodec{}, nil)
+	// _ = c
 
 	signer, err = signerFromInsecurePassphrase("password")
 	require.NoError(t, err)
@@ -70,28 +90,83 @@ func TestGordianEngine(t *testing.T) {
 	initChainCh := make(chan tmapp.InitChainRequest)
 
 	vals := make([]tmconsensus.Validator, 1)
-	pubKeyBytes, err := hex.DecodeString("b5a700b9ffc2a63b9cceac8c726b9a7d59b9059e3bced6b1fa3832c4551f48a3")
-	require.NoError(t, err)
-
-	pubKey, err := gcrypto.NewEd25519PubKey(pubKeyBytes)
-	require.NoError(t, err)
 
 	vals[0] = tmconsensus.Validator{
-		PubKey: pubKey,
+		PubKey: signer.PubKey(),
 		Power:  1,
 	}
 
 	cStrat := &echoConsensusStrategy{
 		Log: log.With("sys", "consensus"),
 	}
-	if signer != nil {
-		// No pubkey set in follower mode.
-		cStrat.PubKey = signer.PubKey()
-	}
+	cStrat.PubKey = signer.PubKey() // not follower mode
 
 	gs := tmgossip.NewChattyStrategy(ctx, log.With("sys", "chattygossip"), nil)
 
-	e, err := tmengine.New(
+	var gordianengine *tmengine.Engine
+
+	go func() {
+		// this is a  (a *echoApp) background routine for now. no done for now.
+		time.Sleep(2 * time.Second)
+
+		// Assume we always need to initialize the chain at startup.
+		select {
+		case <-ctx.Done():
+			fmt.Println("Stopping due to context cancellation", "cause", context.Cause(ctx))
+			return
+
+		case req := <-initChainCh:
+			// a.vals = req.Genesis.GenesisValidators
+			fmt.Println("InitChainRequest", req)
+			fmt.Println("req.Genesis.GenesisValidators", req.Genesis.GenesisValidators)
+
+			// Ignore genesis app state, start with empty state.
+
+			stateHash := sha256.Sum256([]byte(""))
+			select {
+			case req.Resp <- tmapp.InitChainResponse{
+				AppStateHash: stateHash[:],
+
+				// Omitting validators since we want to match the input.
+			}:
+				// Okay.
+			case <-ctx.Done():
+				// a.log.Info(
+				// 	"Stopping due to context cancellation while attempting to respond to InitChainRequest",
+				// 	"cause", context.Cause(ctx),
+				// )
+				fmt.Println("Stopping due to context cancellation while attempting to respond to InitChainRequest", "cause", context.Cause(ctx))
+				return
+			}
+		}
+
+		// init chain here from store v2 w/ consensus InitChain ?
+		// but how does InitChain hook into the SDK through server_v2?
+		// c.InitChain(ctx, &tmapp.InitChainRequest{})
+
+		// call server_v2 to return to respch? (how)
+
+		// icr := make(chan tmapp.InitChainResponse, 1)
+		// icr <- tmapp.InitChainResponse{
+		// 	AppStateHash: []byte("hash"),
+		// 	Validators:   vals,
+		// }
+		// // print icr
+		// result := <-icr
+		// fmt.Println(result)
+
+		// write to the initChainCh
+		// initChainCh <- tmapp.InitChainRequest{
+		// 	Resp: icr,
+		// }
+		// result := <-icr
+		// fmt.Println(result)
+
+		cancel()
+
+	}()
+
+	gordianengine, err = tmengine.New(
 		ctx,
 		log.With("sys", "engine"),
 		tmengine.WithActionStore(as),
@@ -109,7 +184,7 @@ func TestGordianEngine(t *testing.T) {
 		tmengine.WithGossipStrategy(gs),
 
 		tmengine.WithGenesis(&tmconsensus.ExternalGenesis{
-			ChainID:           "gordiandemo-echo",
+			ChainID:           "gordiandemo-sdk",
 			InitialHeight:     1,
 			InitialAppState:   initAppState,
 			GenesisValidators: vals,
@@ -123,10 +198,7 @@ func TestGordianEngine(t *testing.T) {
 		tmengine.WithSigner(signer),
 	)
 	require.NoError(t, err)
-
-	defer e.Wait()
-
-	cancel()
+	defer gordianengine.Wait()
 
 }
 
