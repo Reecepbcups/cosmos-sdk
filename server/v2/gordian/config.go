@@ -33,6 +33,9 @@ type Config struct {
 	// Probably just for testing
 	PrivateKey libp2pcrypto.PrivKey `mapstructure:"private_key"`
 	ID         string               `mapstructure:"id"`
+
+	// Must be set by the application to grant authority to the consensus engine to send messages to the consensus module
+	ConsensusAuthority string
 }
 
 func NewDefaultConfig() Config {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"fmt"
+	"log/slog"
 	"os"
 
 	"cosmossdk.io/log"
@@ -11,6 +12,8 @@ import (
 	"github.com/libp2p/go-libp2p"
 	libp2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
 	libp2ppeer "github.com/libp2p/go-libp2p/core/peer"
+	"github.com/rollchains/gordian/gcrypto"
+	"github.com/rollchains/gordian/tm/tmcodec/tmjson"
 	"github.com/rollchains/gordian/tm/tmp2p/tmlibp2p"
 
 	"github.com/spf13/viper"
@@ -19,7 +22,6 @@ import (
 	"cosmossdk.io/core/transaction"
 	serverv2 "cosmossdk.io/server/v2"
 	"cosmossdk.io/server/v2/appmanager"
-	gordianlog "cosmossdk.io/server/v2/gordian/log"
 	"cosmossdk.io/server/v2/gordian/mempool"
 )
 
@@ -32,7 +34,8 @@ var _ serverv2.ServerModule = (*GordianServer[transaction.Tx])(nil)
 type GordianServer[T transaction.Tx] struct {
 	// Node *node.Node
 	// App    *Consensus[T]
-	logger log.Logger
+	sdklogger log.Logger // TODO: remove / wrap together
+	slog      *slog.Logger
 
 	config    Config
 	cleanupFn func()
@@ -43,7 +46,7 @@ type GordianServer[T transaction.Tx] struct {
 type App[T transaction.Tx] interface {
 	// GetApp() *appmanager.AppManager[T]
 	GetLogger() log.Logger
-	// GetStore() types.Store
+	GetStore() types.Store
 }
 
 func NewGordianServer[T transaction.Tx](
@@ -64,8 +67,9 @@ func NewGordianServer[T transaction.Tx](
 	fmt.Println(consensus)
 
 	return &GordianServer[T]{
-		logger: logger,
-		config: cfg,
+		sdklogger: logger,
+		slog:      slog.New(slog.NewTextHandler(os.Stdout, nil)).With("module", "gordian-server"),
+		config:    cfg,
 	}
 }
 
@@ -78,21 +82,16 @@ func (s *GordianServer[T]) Name() string {
 func (s *GordianServer[T]) privKeyToFile(insecurePassword, file string) error {
 	c, err := os.ReadFile(file)
 	if err != nil {
-		// save to config/
+		// save to a file so we have deterministic keys based on input generation
 		privKey, err := libp2pKeyFromInsecurePassphrase(insecurePassword)
 		if err != nil {
 			return fmt.Errorf("failed to create libp2p key: %w", err)
 		}
-		// id, err := libp2ppeer.IDFromPrivateKey(privKey) // we can just load this from priv key at runtime
-		// if err != nil {
-		// 	return fmt.Errorf("failed to generate ID from libp2p private key: %w", err)
-		// }
 
 		bz, err := libp2pcrypto.MarshalPrivateKey(privKey)
 		if err != nil {
 			return fmt.Errorf("failed to marshal libp2p private key: %w", err)
 		}
-		// s.config.PrivateKey = bz
 
 		// save to file
 		if err := os.WriteFile(file, bz, 0644); err != nil {
@@ -111,11 +110,13 @@ func (s *GordianServer[T]) privKeyToFile(insecurePassword, file string) error {
 
 // Start implements serverv2.ServerModule.
 func (s *GordianServer[T]) Start(context.Context) error {
-	ctx := context.Background()
-	l := gordianlog.GordianLoggerWrapper{Logger: s.logger}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// l := gordianlog.GordianLoggerWrapper{Logger: }
+	l := s.sdklogger
 	l.Info("Starting Gordian server")
 
-	// TODO: new node (from key) and node with context
 	listenAddrs := p2pListenAddr
 	h, err := tmlibp2p.NewHost(
 		ctx,
@@ -150,6 +151,22 @@ func (s *GordianServer[T]) Start(context.Context) error {
 	}
 	l.Info("Loaded libp2p private key", "id", id)
 
+	reg := new(gcrypto.Registry)
+	gcrypto.RegisterEd25519(reg)
+	codec := tmjson.MarshalCodec{
+		CryptoRegistry: reg,
+	}
+	conn, err := tmlibp2p.NewConnection(
+		ctx,
+		s.slog.With("sys", "libp2pconn"),
+		h,
+		codec,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to build libp2p connection: %w", err)
+	}
+	defer conn.Disconnect()
+
 	return nil
 }
 
@@ -172,6 +189,7 @@ func (s *GordianServer[T]) Config() (any, *viper.Viper) {
 }
 
 // from [cmd/gordian-echo/main.go]
+// state v3 has lib p2p Idenity option, not in mirror
 func libp2pKeyFromInsecurePassphrase(insecurePassphrase string) (libp2pcrypto.PrivKey, error) {
 	bh, err := blake2b.New(ed25519.SeedSize, nil)
 	if err != nil {

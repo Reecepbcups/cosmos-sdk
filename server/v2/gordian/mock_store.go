@@ -1,16 +1,21 @@
 package gordian
 
 import (
+	"io"
+
 	corestore "cosmossdk.io/core/store"
 	"cosmossdk.io/log"
 	ammstore "cosmossdk.io/server/v2/appmanager/store"
 	"cosmossdk.io/server/v2/stf/branch"
+	"cosmossdk.io/store/types"
 	storev2 "cosmossdk.io/store/v2"
 	"cosmossdk.io/store/v2/commitment"
 	dbm "cosmossdk.io/store/v2/db"
 	"cosmossdk.io/store/v2/proof"
 	"cosmossdk.io/store/v2/storage/pebbledb"
 )
+
+var _ types.Store = (*MockStore)(nil)
 
 type MockStore struct {
 	Storage  ammstore.Storage[*pebbledb.Database]
@@ -80,4 +85,19 @@ func (s *MockStore) LastCommitID() (proof.CommitID, error) {
 		Version: v,
 		Hash:    []byte{},
 	}, err
+}
+
+// CacheWrap implements types.CacheWrapper.
+func (s *MockStore) CacheWrap() types.CacheWrap {
+	panic("unimplemented")
+}
+
+// CacheWrapWithTrace implements types.CacheWrapper.
+func (s *MockStore) CacheWrapWithTrace(w io.Writer, tc types.TraceContext) types.CacheWrap {
+	panic("unimplemented")
+}
+
+// GetStoreType implements types.Store.
+func (s *MockStore) GetStoreType() types.StoreType {
+	panic("unimplemented")
 }
