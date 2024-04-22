@@ -3,6 +3,8 @@ package types
 import (
 	"context"
 
+	// TODO: this depends on cometbft abci types, which can't be the case for gordian unless we shim?
+	// making the entire ABCIWrapper useless for us. It's just cometbft
 	abci "github.com/cometbft/cometbft/abci/types"
 )
 

@@ -92,6 +92,7 @@ func NewConsensus[T transaction.Tx](
 
 // var _ abci.Application = (*Consensus[transaction.Tx])(nil) // abci types needed within gordian
 
+// TODO: do I return cometbft abci resp or tmapp InitChainResp?
 func (c *Consensus[T]) InitChain(ctx context.Context, req *tmapp.InitChainRequest) (*tmapp.InitChainResponse, error) {
 	c.chainID = req.Genesis.ChainID
 	initHeight := req.Genesis.InitialHeight

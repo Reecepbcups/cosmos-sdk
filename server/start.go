@@ -241,8 +241,11 @@ func startStandAlone[T types.Application](svrCtx *Context, svrCfg serverconfig.C
 	addr := svrCtx.Viper.GetString(flagAddress)
 	transport := svrCtx.Viper.GetString(flagTransport)
 
-	cmtApp := NewCometABCIWrapper(app)
-	svr, err := server.NewServer(addr, transport, cmtApp)
+	// TODO: change to allow for gordian as well
+	// cmtApp := NewCometABCIWrapper(app)
+	fmt.Println("Starting ABCI server with Gordian in startStandAlone")
+	gordianApp := NewGordianABCIWrapper(app)
+	svr, err := server.NewServer(addr, transport, gordianApp)
 	if err != nil {
 		return fmt.Errorf("error creating listener: %w", err)
 	}

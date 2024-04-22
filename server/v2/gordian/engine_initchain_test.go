@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/neilotoole/slogt"
 	"github.com/rollchains/gordian/gcrypto"
@@ -51,27 +50,6 @@ func TestGordianEngine(t *testing.T) {
 	// genesis := fx.DefaultGenesis()
 	initAppState := strings.NewReader(`{"app_state": {"key", "value"}}`)
 
-	// storageDB, err := pebbledb.New(t.TempDir())
-	// require.NoError(t, err)
-	// ss, _ := ammstore.New(storageDB)
-
-	// b := appmanager.Builder[mock.Tx]{
-	// 	// STF:                s, // TODO: ?
-	// 	DB:                 ss,
-	// 	ValidateTxGasLimit: 100_000,
-	// 	QueryGasLimit:      100_000,
-	// 	SimulationGasLimit: 100_000,
-	// }
-
-	// am, err := b.Build()
-	// require.NoError(t, err)
-
-	// mockStore := NewMockStore()
-
-	// TODO: so we can plug into the app
-	// c := NewConsensus[mock.Tx](am, mempool.NoOpMempool[mock.Tx]{}, mockStore, Config{}, mock.TxCodec{}, nil)
-	// _ = c
-
 	signer, err = signerFromInsecurePassphrase("password")
 	require.NoError(t, err)
 
@@ -105,9 +83,9 @@ func TestGordianEngine(t *testing.T) {
 
 	var gordianengine *tmengine.Engine
 
+	// TODO: handle this through server_v2
 	go func() {
 		// this is a  (a *echoApp) background routine for now. no done for now.
-		time.Sleep(2 * time.Second)
 
 		// Assume we always need to initialize the chain at startup.
 		select {
