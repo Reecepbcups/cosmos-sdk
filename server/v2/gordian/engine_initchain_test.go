@@ -1,43 +1,97 @@
 package gordian
 
 import (
-	"bytes"
 	"context"
-	"crypto/ed25519"
 	"crypto/sha256"
 	"fmt"
-	"log/slog"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/neilotoole/slogt"
-	"github.com/rollchains/gordian/gcrypto"
 	"github.com/rollchains/gordian/tm/tmapp"
 	"github.com/rollchains/gordian/tm/tmconsensus"
 	"github.com/rollchains/gordian/tm/tmconsensus/tmconsensustest"
-	"github.com/rollchains/gordian/tm/tmengine"
-	"github.com/rollchains/gordian/tm/tmgossip"
-	"github.com/rollchains/gordian/tm/tmstore/tmmemstore"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/blake2b"
 )
 
-func signerFromInsecurePassphrase(insecurePassphrase string) (gcrypto.Ed25519Signer, error) {
-	bh, err := blake2b.New(ed25519.SeedSize, nil)
-	if err != nil {
-		return gcrypto.Ed25519Signer{}, err
+func TestNewGordianEngine(t *testing.T) {
+	log := slogt.New(t, slogt.Text())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// var signer gcrypto.Signer
+	// var err error
+	signer, err := SignerFromInsecurePassphrase("password")
+	require.NoError(t, err)
+
+	vals := make([]tmconsensus.Validator, 1)
+	vals[0] = tmconsensus.Validator{
+		PubKey: signer.PubKey(),
+		Power:  1,
 	}
-	bh.Write([]byte("gordian-echo|"))
-	bh.Write([]byte(insecurePassphrase))
-	seed := bh.Sum(nil)
 
-	privKey := ed25519.NewKeyFromSeed(seed)
+	initAppState := strings.NewReader(`{"app_state": {"key", "value"}}`)
 
-	return gcrypto.NewEd25519Signer(privKey), nil
+	// cStrat := &echoConsensusStrategy{
+	// Log: log.With("sys", "consensus"),
+	// }
+	// cStrat.PubKey = signer.PubKey() // not follower mode
+	cStrat := &tmconsensustest.NopConsensusStrategy{}
+
+	initChainCh := make(chan tmapp.InitChainRequest)
+	blockFinCh := make(chan tmapp.FinalizeBlockRequest)
+
+	// TODO: handle in a server_v2 consensus background process
+	go func() {
+		// this is a  (a *echoApp) background routine for now. no done for now.
+
+		// Assume we always need to initialize the chain at startup.
+		select {
+		case <-ctx.Done():
+			fmt.Println("Stopping due to context cancellation", "cause", context.Cause(ctx))
+			return
+
+		case req := <-initChainCh:
+			// a.vals = req.Genesis.GenesisValidators
+			fmt.Println("InitChainRequest", req)
+			fmt.Println("req.Genesis.GenesisValidators", req.Genesis.GenesisValidators)
+
+			// Ignore genesis app state, start with empty state.
+
+			stateHash := sha256.Sum256([]byte(""))
+			select {
+			case req.Resp <- tmapp.InitChainResponse{
+				AppStateHash: stateHash[:],
+				// Omitting validators since we want to match the input.
+			}:
+				// Okay.
+			case <-ctx.Done():
+				// a.log.Info(
+				// 	"Stopping due to context cancellation while attempting to respond to InitChainRequest",
+				// 	"cause", context.Cause(ctx),
+				// )
+				fmt.Println("Stopping due to context cancellation while attempting to respond to InitChainRequest", "cause", context.Cause(ctx))
+				return
+			}
+		}
+
+		cancel()
+	}()
+
+	gordianengine, err := NewGordianEngineInstance(
+		ctx, log, vals,
+		initAppState, cStrat,
+		false, "gordiandemo-sdk", initChainCh, blockFinCh,
+	)
+	require.NoError(t, err)
+	defer gordianengine.Wait()
+
+	// print e
+	// fmt.Println("engine", gordianengine)
 }
 
-func TestGordianEngine(t *testing.T) {
+/*
+func TestGordianEngineOld(t *testing.T) {
 	var signer gcrypto.Signer
 	var err error
 
@@ -50,13 +104,13 @@ func TestGordianEngine(t *testing.T) {
 	// genesis := fx.DefaultGenesis()
 	initAppState := strings.NewReader(`{"app_state": {"key", "value"}}`)
 
-	signer, err = signerFromInsecurePassphrase("password")
+	signer, err = SignerFromInsecurePassphrase("password")
 	require.NoError(t, err)
 
 	var as *tmmemstore.ActionStore
-	if signer != nil {
-		as = tmmemstore.NewActionStore()
-	}
+	// if signer != nil {
+	// 	as = tmmemstore.NewActionStore()
+	// }
 
 	bs := tmmemstore.NewBlockStore()
 	fs := tmmemstore.NewFinalizationStore()
@@ -180,6 +234,8 @@ func TestGordianEngine(t *testing.T) {
 
 }
 
+var _ tmconsensus.ConsensusStrategy = (*echoConsensusStrategy)(nil)
+
 // generate a mock strat
 type echoConsensusStrategy struct {
 	Log    *slog.Logger
@@ -279,3 +335,4 @@ func (s *echoConsensusStrategy) DecidePrecommit(ctx context.Context, vs tmconsen
 	)
 	return "", nil
 }
+*/

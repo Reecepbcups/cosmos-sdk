@@ -1,29 +1,6 @@
 package gordian
 
 import (
-	// "context"
-	// "errors"
-	// "fmt"
-	// "sync/atomic"
-
-	// "cosmossdk.io/core/header"
-	// consensustypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
-
-	// consensusv1 "cosmossdk.io/api/cosmos/consensus/v1"
-	// coreappmgr "cosmossdk.io/core/app"
-	// "cosmossdk.io/core/event"
-	// "cosmossdk.io/core/store"
-	// "cosmossdk.io/core/transaction"
-	// errorsmod "cosmossdk.io/errors"
-	// "cosmossdk.io/log"
-	// "cosmossdk.io/server/v2/appmanager"
-	// "cosmossdk.io/server/v2/cometbft/handlers"
-	// "cosmossdk.io/server/v2/cometbft/mempool"
-	// "cosmossdk.io/server/v2/cometbft/types"
-	// cometerrors "cosmossdk.io/server/v2/cometbft/types/errors"
-	// "cosmossdk.io/server/v2/streaming"
-	// "cosmossdk.io/store/v2/snapshots"
-	// abci "github.com/cometbft/cometbft/abci/types"
 	"context"
 	"fmt"
 	"sync/atomic"
@@ -39,6 +16,7 @@ import (
 	"cosmossdk.io/store/v2/snapshots"
 	"github.com/rollchains/gordian/tm/tmapp"
 	"github.com/rollchains/gordian/tm/tmconsensus"
+	"github.com/rollchains/gordian/tm/tmengine"
 )
 
 const (
@@ -69,6 +47,8 @@ type Consensus[T transaction.Tx] struct {
 	// verifyVoteExt          handlers.VerifyVoteExtensionhandler
 	// extendVote             handlers.ExtendVoteHandler
 
+	tmEngine tmengine.Engine
+
 	chainID string
 }
 
@@ -80,6 +60,8 @@ func NewConsensus[T transaction.Tx](
 	txCodec transaction.Codec[T],
 	logger log.Logger,
 ) *Consensus[T] {
+
+	// TODO: create new unbuffered channels here as well? i.e. running background processes? (or maybe start that on init chain?)
 	return &Consensus[T]{
 		mempool: mp,
 		store:   store,
@@ -132,10 +114,21 @@ func (c *Consensus[T]) InitChain(ctx context.Context, req *tmapp.InitChainReques
 
 	println(genesisState) // TODO: this needs to be committed to store as height 0.
 
-	return &tmapp.InitChainResponse{
-		AppStateHash: []byte{},
+	initChainResp := tmapp.InitChainResponse{
+		// ConsensusParams: req.ConsensusParams
 		Validators:   req.Genesis.GenesisValidators,
-	}, nil
+		AppStateHash: []byte{},
+	}
+
+	// TODO: does this work to inform the state machine? or do we do in the server/
+	req.Resp <- initChainResp
+
+	return &initChainResp, nil
+}
+
+func (c *Consensus[T]) Info(ctx context.Context) (struct{}, error) {
+	// TODO: just return some data from gordian to the app. Can flesh this out in gordian layer
+	return struct{}{}, nil
 }
 
 func FinalizeBlock(ctx context.Context, req *tmapp.FinalizeBlockRequest) (*tmapp.FinalizeBlockResponse, error) {
