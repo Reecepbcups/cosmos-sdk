@@ -28,6 +28,8 @@ const (
 	// immediately.
 	BroadcastAsync = "async"
 
+	BroadcastGrpc = "grpc"
+
 	// SignModeDirect is the value of the --sign-mode flag for SIGN_MODE_DIRECT
 	SignModeDirect = "direct"
 	// SignModeLegacyAminoJSON is the value of the --sign-mode flag for SIGN_MODE_LEGACY_AMINO_JSON
@@ -128,9 +130,11 @@ func AddTxFlagsToCmd(cmd *cobra.Command) {
 	f.String(FlagFees, "", "Fees to pay along with transaction; eg: 10uatom")
 	f.String(FlagGasPrices, "", "Determine the transaction fee by multiplying max gas units by gas prices (e.g. 0.1uatom), rounding up to nearest denom unit")
 	f.String(FlagNode, "tcp://localhost:26657", "<host>:<port> to CometBFT rpc interface for this chain")
+	cmd.Flags().String(FlagGRPC, "", "the gRPC endpoint to use for this chain")
+	cmd.Flags().Bool(FlagGRPCInsecure, false, "allow gRPC over insecure channels, if not the server must use TLS")
 	f.Bool(FlagUseLedger, false, "Use a connected Ledger device")
 	f.Float64(FlagGasAdjustment, DefaultGasAdjustment, "adjustment factor to be multiplied against the estimate returned by the tx simulation; if the gas limit is set manually this flag is ignored ")
-	f.StringP(FlagBroadcastMode, "b", BroadcastSync, "Transaction broadcasting mode (sync|async)")
+	f.StringP(FlagBroadcastMode, "b", BroadcastSync, "Transaction broadcasting mode (sync|async|grpc)")
 	f.Bool(FlagDryRun, false, "ignore the --gas flag and perform a simulation of a transaction, but don't broadcast it (when enabled, the local Keybase is not accessible)")
 	f.Bool(FlagGenerateOnly, false, "Build an unsigned transaction and write it to STDOUT (when enabled, the local Keybase only accessed when providing a key name)")
 	f.Bool(FlagOffline, false, "Offline mode (does not allow any online functionality)")

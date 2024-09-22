@@ -20,7 +20,11 @@ func DefaultJSONTxDecoder(addrCodec address.Codec, cdc codec.Codec, decoder *dec
 		var jsonTx tx.Tx
 		err := cdc.UnmarshalJSON(txBytes, &jsonTx)
 		if err != nil {
-			return nil, errorsmod.Wrap(sdkerrors.ErrTxDecode, err.Error())
+			// TODO: remove this hack fix which decodes the raw bytes back to the JSON object and continues.
+			// Gordian: raw bytes are already decoded (vs sending in the json itself)
+			if err2 := jsonTx.Unmarshal(txBytes); err2 != nil {
+				return nil, errorsmod.Wrap(sdkerrors.ErrTxDecode, err.Error())
+			}
 		}
 
 		// need to convert jsonTx into raw tx.

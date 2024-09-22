@@ -2,14 +2,18 @@ package client
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"strings"
 
 	"github.com/cometbft/cometbft/mempool"
 	cmttypes "github.com/cometbft/cometbft/types"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 
+	txv1beta1 "cosmossdk.io/api/cosmos/tx/v1beta1"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -24,6 +28,9 @@ func (ctx Context) BroadcastTx(txBytes []byte) (res *sdk.TxResponse, err error) 
 	switch ctx.BroadcastMode {
 	case flags.BroadcastSync:
 		res, err = ctx.BroadcastTxSync(txBytes)
+
+	case flags.BroadcastGrpc:
+		res, err = ctx.BroadcastTxSyncGrpc(txBytes, "127.0.0.1:9092", "/gordian.server.v1.GordianGRPC/SubmitTransactionSync")
 
 	case flags.BroadcastAsync:
 		res, err = ctx.BroadcastTxAsync(txBytes)
@@ -92,6 +99,31 @@ func (ctx Context) BroadcastTxSync(txBytes []byte) (*sdk.TxResponse, error) {
 	}
 
 	return sdk.NewResponseFormatBroadcastTx(res), err
+}
+
+func (ctx Context) BroadcastTxSyncGrpc(txBytes []byte, consensusAddr, method string) (*sdk.TxResponse, error) {
+	c, err := grpc.NewClient(consensusAddr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDisableHealthCheck())
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	txReq := &txv1beta1.BroadcastTxRequest{
+		TxBytes: txBytes,
+	}
+
+	// TODO: we need a proto message that gordian can also unmarshal into without wireType issues
+	// Maybe a TxResponseMinimal message that only returns a TxHash, Code, and Error text?
+	reply := &sdk.MsgData{}
+	if err := c.Invoke(ctx.CmdContext, method, txReq, reply); err != nil {
+		fmt.Printf("idk but: BroadcastTxSyncGrpc failed to invoke grpc method: %v\n", err)
+		// return nil, fmt.Errorf("BroadcastTxSyncGrpc failed to invoke grpc method: %w", err)
+	}
+
+	return &sdk.TxResponse{
+		Data:   "idk this is just a test for the BroadcastTxSyncGrpc. the txHash is probably not correct.",
+		TxHash: fmt.Sprintf("%X", sha256.Sum256(txBytes)),
+	}, err
 }
 
 // BroadcastTxAsync broadcasts transaction bytes to a CometBFT node

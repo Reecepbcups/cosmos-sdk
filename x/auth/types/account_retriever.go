@@ -45,6 +45,16 @@ func (ar AccountRetriever) GetAccountWithHeight(clientCtx client.Context, addr s
 	}
 
 	blockHeight := header.Get(grpctypes.GRPCBlockHeightHeader)
+
+	// TODO: this is a hack that returns 0 as the height so if the header is empty, it can still continue to create the transaction.
+	// When I try to submit a Tx using the grpc-address in the client.toml, it throws an error for
+	// ./gcosmos tx bank send val cosmos10r39fueph9fq7a6lgswu4zdsg8t3gxlqvvvyvn 1stake
+	// unexpected 'x-cosmos-block-height' header length; got 0, expected: 1
+	// This allows me to get to the 'confirm transaction before signing and broadcasting' step of signing the Tx.
+	if len(blockHeight) != 1 {
+		blockHeight = []string{"0"}
+	}
+
 	if l := len(blockHeight); l != 1 {
 		return nil, 0, fmt.Errorf("unexpected '%s' header length; got %d, expected: %d", grpctypes.GRPCBlockHeightHeader, l, 1)
 	}
