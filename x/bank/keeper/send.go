@@ -15,6 +15,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // SendKeeper defines a module interface that facilitates the transfer of coins
@@ -51,6 +52,10 @@ type SendKeeper interface {
 
 var _ SendKeeper = (*BaseSendKeeper)(nil)
 
+// this was made global so that it can be updated without making BaseSendKeeper pointers
+// list of addresses that are restricted from receiving transactions
+var blockedAddrs map[string]bool
+
 // BaseSendKeeper only allows transfers between accounts without the possibility of
 // creating coins. It implements the SendKeeper interface.
 type BaseSendKeeper struct {
@@ -60,9 +65,6 @@ type BaseSendKeeper struct {
 	ak           types.AccountKeeper
 	storeService store.KVStoreService
 	logger       log.Logger
-
-	// list of addresses that are restricted from receiving transactions
-	blockedAddrs map[string]bool
 
 	// the address capable of executing a MsgUpdateParams message. Typically, this
 	// should be the x/gov module account.
@@ -75,7 +77,7 @@ func NewBaseSendKeeper(
 	cdc codec.BinaryCodec,
 	storeService store.KVStoreService,
 	ak types.AccountKeeper,
-	blockedAddrs map[string]bool,
+	blockedAddresses map[string]bool,
 	authority string,
 	logger log.Logger,
 ) BaseSendKeeper {
@@ -83,12 +85,16 @@ func NewBaseSendKeeper(
 		panic(fmt.Errorf("invalid bank authority address: %w", err))
 	}
 
+	blockedAddrs = blockedAddresses
+	if blockedAddrs == nil {
+		blockedAddrs = make(map[string]bool)
+	}
+
 	return BaseSendKeeper{
 		BaseViewKeeper:  NewBaseViewKeeper(cdc, storeService, ak, logger),
 		cdc:             cdc,
 		ak:              ak,
 		storeService:    storeService,
-		blockedAddrs:    blockedAddrs,
 		authority:       authority,
 		logger:          logger,
 		sendRestriction: newSendRestriction(),
@@ -367,12 +373,64 @@ func (k BaseSendKeeper) IsSendEnabledCoin(ctx context.Context, coin sdk.Coin) bo
 // BlockedAddr checks if a given address is restricted from
 // receiving funds.
 func (k BaseSendKeeper) BlockedAddr(addr sdk.AccAddress) bool {
-	return k.blockedAddrs[addr.String()]
+	return blockedAddrs[addr.String()]
 }
 
 // GetBlockedAddresses returns the full list of addresses restricted from receiving funds.
 func (k BaseSendKeeper) GetBlockedAddresses() map[string]bool {
-	return k.blockedAddrs
+	return blockedAddrs
+}
+
+// SetExtraBlockedAddresses allows extending the list of blockedAddrs
+func (k BaseSendKeeper) UpdateBlockedAddresses(add []string, remove []string) {
+	if add == nil {
+		add = []string{}
+	}
+	if remove == nil {
+		remove = []string{}
+	}
+
+	for _, addr := range remove {
+		ondoAddr, hexAddr, err := GetAddressPair(addr)
+		if err != nil {
+			k.logger.Error("failed to get address pair", "address", addr, "error", err)
+			continue
+		}
+
+		// handle add and remove as both
+		delete(blockedAddrs, ondoAddr.String())
+		delete(blockedAddrs, hexAddr.Hex())
+	}
+
+	for _, addr := range add {
+		ondoAddr, hexAddr, err := GetAddressPair(addr)
+		if err != nil {
+			k.logger.Error("failed to get address pair", "address", addr, "error", err)
+			continue
+		}
+
+		blockedAddrs[ondoAddr.String()] = true
+		blockedAddrs[hexAddr.Hex()] = true
+	}
+}
+
+// ConvertAnyAddressToBytes is from ondo's util package for converting addresses
+func ConvertAnyAddressToBytes(addr string) ([]byte, error) {
+	if common.IsHexAddress(addr) {
+		return common.FromHex(addr), nil
+	}
+
+	return sdk.AccAddressFromBech32(addr)
+}
+
+// GetAddressPair is from ondo's util package for converting addresses
+func GetAddressPair(addr string) (sdk.AccAddress, common.Address, error) {
+	bz, err := ConvertAnyAddressToBytes(addr)
+	if err != nil {
+		return nil, common.Address{}, err
+	}
+
+	return sdk.AccAddress(bz), common.BytesToAddress(bz), nil
 }
 
 // IsSendEnabledDenom returns the current SendEnabled status of the provided denom.
