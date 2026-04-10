@@ -1,0 +1,17 @@
+[package]
+name = "qmdb-ffi"
+version = "0.1.0"
+edition = "2021"
+description = "C FFI bindings for qmdb"
+license = "MIT OR Apache-2.0"
+
+[lib]
+name = "qmdb_ffi"
+crate-type = ["staticlib", "cdylib"]
+
+[dependencies]
+qmdb = { path = "../qmdb" }
+sha2 = { version = "0.10.8", features = ["asm", "asm-aarch64", "sha2-asm"] }
+parking_lot = "0.12.1"
+
+# Header is manually maintained in qmdb_ffi.h
