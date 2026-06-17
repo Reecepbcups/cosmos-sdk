@@ -1,4 +1,4 @@
-package ante_test
+package signing_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
-	"github.com/cosmos/cosmos-sdk/x/auth/ante"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 )
 
 // BenchmarkSigCache models the real cost the SDK pays today: every tx signature
@@ -37,7 +37,7 @@ func BenchmarkSigCache(b *testing.B) {
 
 	b.Run("with_cache_double_verify", func(b *testing.B) {
 		b.ReportAllocs()
-		sc, err := ante.NewSignatureCache(b.N + 1)
+		sc, err := authsigning.NewSignatureCache(b.N + 1)
 		require.NoError(err)
 		for i := 0; i < b.N; i++ {
 			b.StopTimer()
@@ -53,7 +53,7 @@ func BenchmarkSigCache(b *testing.B) {
 
 	b.Run("cache_hit_only", func(b *testing.B) {
 		b.ReportAllocs()
-		sc, err := ante.NewSignatureCache(16)
+		sc, err := authsigning.NewSignatureCache(16)
 		require.NoError(err)
 		msg := cmtcrypto.CRandBytes(256)
 		sig, err := sk.Sign(msg)

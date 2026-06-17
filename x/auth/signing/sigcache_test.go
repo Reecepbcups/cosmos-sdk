@@ -1,4 +1,4 @@
-package ante_test
+package signing_test
 
 import (
 	"testing"
@@ -7,13 +7,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
-	"github.com/cosmos/cosmos-sdk/x/auth/ante"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 )
 
 // TestSignatureCacheCorrectness asserts the cache never accepts a bad signature
 // and stays consistent across repeated lookups. This path is consensus-critical.
 func TestSignatureCacheCorrectness(t *testing.T) {
-	sc, err := ante.NewSignatureCache(ante.DefaultSignatureCacheSize)
+	sc, err := authsigning.NewSignatureCache(authsigning.DefaultSignatureCacheSize)
 	require.NoError(t, err)
 
 	sk := secp256k1.GenPrivKey()

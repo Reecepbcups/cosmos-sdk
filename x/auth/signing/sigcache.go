@@ -1,4 +1,4 @@
-package ante
+package signing
 
 import (
 	"crypto/sha256"
@@ -48,6 +48,11 @@ func sigCacheKey(pubKey cryptotypes.PubKey, signBytes, sig []byte) [32]byte {
 	var k [32]byte
 	copy(k[:], h.Sum(nil))
 	return k
+}
+
+// Len returns the number of cached signatures. Useful for metrics and tests.
+func (sc *SignatureCache) Len() int {
+	return sc.cache.Len()
 }
 
 // Verify reports whether sig is a valid signature of signBytes by pubKey, using
