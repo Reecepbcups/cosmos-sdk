@@ -9,8 +9,9 @@ import (
 )
 
 // DefaultSignatureCacheSize is the default number of verified signatures to retain.
-// At ~32 bytes/key this is a few MB, enough to cover the mempool->block window
-// for a busy chain.
+// Beyond the 32B key, golang-lru keeps a map entry and a linked-list node per
+// item, so the real footprint is ~100B+/entry: roughly 50-80MB resident at this
+// size. Size it down if memory-constrained.
 const DefaultSignatureCacheSize = 500_000
 
 // SignatureCache is a read-through cache of signatures that have already been
