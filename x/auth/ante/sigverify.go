@@ -236,9 +236,19 @@ type SigVerificationDecorator struct {
 	signModeHandler      *txsigning.HandlerMap
 	maxTxTimeoutDuration time.Duration
 	unorderedTxGasCost   uint64
+	sigCache             *authsigning.SignatureCache
 }
 
 type SigVerificationDecoratorOption func(svd *SigVerificationDecorator)
+
+// WithSignatureCache sets a read-through cache of verified signatures. When set,
+// a signature verified during CheckTx is not re-verified during FinalizeBlock.
+// Leaving it unset preserves the existing behavior of verifying every time.
+func WithSignatureCache(cache *authsigning.SignatureCache) SigVerificationDecoratorOption {
+	return func(svd *SigVerificationDecorator) {
+		svd.sigCache = cache
+	}
+}
 
 // WithMaxUnorderedTxTimeoutDuration sets the maximum TTL a transaction can define for unordered transactions.
 func WithMaxUnorderedTxTimeoutDuration(duration time.Duration) SigVerificationDecoratorOption {
@@ -395,7 +405,7 @@ func (svd SigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simul
 				return ctx, fmt.Errorf("expected tx to implement V2AdaptableTx, got %T", tx)
 			}
 			txData := adaptableTx.GetSigningTxData()
-			err = authsigning.VerifySignature(ctx, pubKey, signerData, sig.Data, svd.signModeHandler, txData)
+			err = authsigning.VerifySignatureWithCache(ctx, pubKey, signerData, sig.Data, svd.signModeHandler, txData, svd.sigCache)
 			if err != nil {
 				var errMsg string
 				if OnlyLegacyAminoSigners(sig.Data) {

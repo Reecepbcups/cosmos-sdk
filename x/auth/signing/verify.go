@@ -67,6 +67,22 @@ func VerifySignature(
 	handler *txsigning.HandlerMap,
 	txData txsigning.TxData,
 ) error {
+	return VerifySignatureWithCache(ctx, pubKey, signerData, signatureData, handler, txData, nil)
+}
+
+// VerifySignatureWithCache behaves like VerifySignature but, when cache is non-nil,
+// consults it to skip the EC verification for a single signature that has already
+// been verified. A nil cache makes this identical to VerifySignature. The cache is
+// only applied to single-signer signatures; multisig always runs the full path.
+func VerifySignatureWithCache(
+	ctx context.Context,
+	pubKey cryptotypes.PubKey,
+	signerData txsigning.SignerData,
+	signatureData signing.SignatureData,
+	handler *txsigning.HandlerMap,
+	txData txsigning.TxData,
+	cache *SignatureCache,
+) error {
 	switch data := signatureData.(type) {
 	case *signing.SingleSignatureData:
 		signMode, err := internalSignModeToAPI(data.SignMode)
@@ -77,7 +93,7 @@ func VerifySignature(
 		if err != nil {
 			return err
 		}
-		if !pubKey.VerifySignature(signBytes, data.Signature) {
+		if !verifyMaybeCached(cache, pubKey, signBytes, data.Signature) {
 			return fmt.Errorf("unable to verify single signer signature")
 		}
 		return nil
@@ -101,4 +117,13 @@ func VerifySignature(
 	default:
 		return fmt.Errorf("unexpected SignatureData %T", signatureData)
 	}
+}
+
+// verifyMaybeCached runs the signature verification through cache when provided,
+// otherwise it performs the direct EC verification.
+func verifyMaybeCached(cache *SignatureCache, pubKey cryptotypes.PubKey, signBytes, sig []byte) bool {
+	if cache != nil {
+		return cache.Verify(pubKey, signBytes, sig)
+	}
+	return pubKey.VerifySignature(signBytes, sig)
 }
