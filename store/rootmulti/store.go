@@ -60,6 +60,11 @@ type Store struct {
 	db                  dbm.DB
 	logger              log.Logger
 	lastCommitInfo      *types.CommitInfo
+	// lastCommitID memoizes LastCommitID for the current lastCommitInfo. Computing
+	// it rebuilds a SHA256 merkle root over every store (CommitInfo.Hash), which is
+	// invariant between commits, so we compute it once whenever lastCommitInfo is
+	// set rather than on every query. Kept in sync via setLastCommitInfo.
+	lastCommitID        types.CommitID
 	pruningManager      *pruning.Manager
 	iavlCacheSize       int
 	iavlDisableFastNode bool
@@ -296,7 +301,7 @@ func (rs *Store) loadVersion(ver int64, upgrades *types.StoreUpgrades) error {
 		}
 	}
 
-	rs.lastCommitInfo = cInfo
+	rs.setLastCommitInfo(cInfo)
 	rs.stores = newStores
 
 	// load any snapshot heights we missed from disk to be pruned on the next run
@@ -453,16 +458,29 @@ func (rs *Store) LastCommitID() types.CommitID {
 			Hash:    appHash, // set empty apphash to sha256([]byte{}) if info is nil
 		}
 	}
-	if len(rs.lastCommitInfo.CommitID().Hash) == 0 {
-		emptyHash := sha256.Sum256([]byte{})
-		appHash := emptyHash[:]
-		return types.CommitID{
-			Version: rs.lastCommitInfo.Version,
-			Hash:    appHash, // set empty apphash to sha256([]byte{}) if hash is nil
-		}
+	return rs.lastCommitID
+}
+
+// setLastCommitInfo updates lastCommitInfo and memoizes its CommitID. The hash is
+// computed once here (CommitInfo.Hash rebuilds a SHA256 merkle root over all
+// stores) so LastCommitID stays a field read on the hot query path instead of a
+// per-call recompute. It mirrors the empty-hash fallback LastCommitID used to apply.
+func (rs *Store) setLastCommitInfo(cInfo *types.CommitInfo) {
+	rs.lastCommitInfo = cInfo
+	if cInfo == nil {
+		rs.lastCommitID = types.CommitID{}
+		return
 	}
 
-	return rs.lastCommitInfo.CommitID()
+	id := cInfo.CommitID()
+	if len(id.Hash) == 0 {
+		emptyHash := sha256.Sum256([]byte{})
+		id = types.CommitID{
+			Version: cInfo.Version,
+			Hash:    emptyHash[:], // set empty apphash to sha256([]byte{}) if hash is nil
+		}
+	}
+	rs.lastCommitID = id
 }
 
 // Commit implements Committer/CommitStore.
@@ -486,8 +504,9 @@ func (rs *Store) Commit() types.CommitID {
 		rs.logger.Debug("commit header and version mismatch", "header_height", rs.commitHeader.Height, "version", version)
 	}
 
-	rs.lastCommitInfo = commitStores(version, rs.stores, rs.removalMap)
-	rs.lastCommitInfo.Timestamp = rs.commitHeader.Time
+	cInfo := commitStores(version, rs.stores, rs.removalMap)
+	cInfo.Timestamp = rs.commitHeader.Time
+	rs.setLastCommitInfo(cInfo)
 	defer rs.flushMetadata(rs.db, version, rs.lastCommitInfo)
 
 	// remove remnants of removed stores
@@ -509,10 +528,9 @@ func (rs *Store) Commit() types.CommitID {
 		)
 	}
 
-	return types.CommitID{
-		Version: version,
-		Hash:    rs.lastCommitInfo.Hash(),
-	}
+	// rs.lastCommitID was computed from cInfo in setLastCommitInfo above; reuse it
+	// instead of rebuilding the merkle root a second time here.
+	return rs.lastCommitID
 }
 
 // WorkingHash returns the current hash of the store.
